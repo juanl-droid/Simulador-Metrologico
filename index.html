@@ -208,6 +208,7 @@
     <div class="panel">
       <h2>Tu lectura</h2>
       <p class="progress" id="progressLine">Pieza 1 · modo práctica</p>
+      <p class="progress" id="syncStatus" style="color:var(--text-dim);"></p>
       <div class="reading-row">
         <input type="number" step="0.01" id="readingInput" placeholder="0.00">
         <button class="btn primary" id="submitBtn">Verificar</button>
@@ -232,6 +233,36 @@
 <script>
 (function(){
   "use strict";
+
+  // URL del Google Apps Script desplegado como aplicación web (recibe cada lectura y la agrega a la Hoja de Google).
+  const SHEETS_ENDPOINT = "https://script.google.com/macros/s/AKfycbz2C8sblpDSTh5OZg6NWDJPsJ53PkJEiL8lcOKx120uo9fNXQyXCYG21GWVl4hHHycICA/exec";
+
+  function sendToSheet(record){
+    const statusEl = document.getElementById("syncStatus");
+    if(!navigator.onLine){
+      if(statusEl) statusEl.innerHTML = "⚠ sin conexión — la lectura no se envió a la hoja. Descarga tu CSV como respaldo al terminar.";
+      return;
+    }
+    const studentName = document.getElementById("studentName").value.trim() || "anonimo";
+    fetch(SHEETS_ENDPOINT, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        estudiante: studentName,
+        instrumento: record.inst,
+        modo: record.mode,
+        valor_correcto: record.value,
+        lectura_estudiante: record.entered,
+        error: record.error,
+        timestamp: record.ts
+      })
+    }).then(()=>{
+      if(statusEl) statusEl.innerHTML = "✓ enviado a la hoja de registro";
+    }).catch(()=>{
+      if(statusEl) statusEl.innerHTML = "⚠ no se pudo enviar — descarga tu CSV como respaldo al terminar.";
+    });
+  }
 
   const INSTRUMENTS = {
     vernier: {
@@ -491,6 +522,7 @@
     const error = Math.round(Math.abs(entered-correct)*10000)/10000;
     const record = { inst: state.instrument, mode: state.mode, value: correct, entered, error, ts: new Date().toISOString() };
     state.history.push(record);
+    sendToSheet(record);
 
     const fb = document.getElementById("feedback");
     const correctLabel = inst.unit === "in"
