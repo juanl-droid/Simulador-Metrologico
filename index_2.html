@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Simulador de instrumentos de medición</title>
+<meta name="description" content="Práctica de lectura de vernier, micrómetro y comparador de carátula, en milímetros y en pulgadas.">
+
+<!-- Vista previa al compartir el enlace (WhatsApp, Facebook, redes, etc.) -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Simulador de instrumentos de medición">
+<meta property="og:description" content="Práctica de lectura de vernier, micrómetro y comparador de carátula — con escala en milímetros y en pulgadas.">
+<meta property="og:image" content="https://juanl-droid.github.io/Simulador-Metrologico/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://juanl-droid.github.io/Simulador-Metrologico/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Simulador de instrumentos de medición">
+<meta name="twitter:description" content="Práctica de lectura de vernier, micrómetro y comparador de carátula — con escala en milímetros y en pulgadas.">
+<meta name="twitter:image" content="https://juanl-droid.github.io/Simulador-Metrologico/og-image.png">
+
+<!-- PWA / instalación en teléfono -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#16202b">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Metrología Sim">
+<meta name="mobile-web-app-capable" content="yes">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#16202b;
+    --panel:#1f2e3d;
+    --panel-2:#243546;
+    --steel:#dbe4ea;
+    --grid:#33465a;
+    --amber:#f2a900;
+    --amber-dim:#c98f1f;
+    --good:#5fb488;
+    --bad:#d76a5c;
+    --text-dim:#8ea0b3;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--ink);
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size:28px 28px;
+    background-position:-1px -1px;
+    color:var(--steel);
+    font-family:'IBM Plex Sans', sans-serif;
+    min-height:100vh;
+    padding-top:env(safe-area-inset-top);
+    padding-bottom:env(safe-area-inset-bottom);
+    padding-left:env(safe-area-inset-left);
+    padding-right:env(safe-area-inset-right);
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 20px 60px;}
+  header{margin-bottom:22px;}
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--amber);
+    letter-spacing:.06em;
+    margin:0 0 6px;
+  }
+  h1{
+    font-family:'Barlow Condensed', sans-serif;
+    font-weight:700;
+    font-size:34px;
+    line-height:1.05;
+    margin:0 0 8px;
+    color:#f4f7f9;
+  }
+  .sub{color:var(--text-dim);font-size:14.5px;max-width:640px;line-height:1.5;margin:0;}
+
+  .toolbar{
+    display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+    background:var(--panel);border:1px solid var(--grid);border-radius:6px;
+    padding:12px 14px;margin:22px 0 18px;
+  }
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;}
+  .tab{
+    font-family:'Barlow Condensed', sans-serif;
+    font-weight:600;font-size:16px;letter-spacing:.02em;
+    background:transparent;border:1px solid var(--grid);color:var(--text-dim);
+    padding:7px 14px;border-radius:4px;cursor:pointer;transition:.15s;
+  }
+  .tab:hover{border-color:var(--amber-dim);color:var(--steel);}
+  .tab.active{background:var(--amber);border-color:var(--amber);color:#1a1305;}
+
+  .seg{display:flex;border:1px solid var(--grid);border-radius:4px;overflow:hidden;}
+  .seg button{
+    font-family:'IBM Plex Sans';font-size:13px;font-weight:500;
+    background:var(--panel-2);color:var(--text-dim);border:none;padding:8px 12px;cursor:pointer;
+  }
+  .seg button.active{background:var(--amber);color:#1a1305;}
+  .seg button:disabled{opacity:.4;cursor:not-allowed;}
+
+  .toolbar .spacer{flex:1;}
+  .field{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-dim);}
+  .field input[type=text]{
+    background:var(--ink);border:1px solid var(--grid);color:var(--steel);
+    padding:6px 8px;border-radius:4px;font-family:'IBM Plex Sans';font-size:16px;width:150px;
+  }
+  select{
+    background:var(--ink);border:1px solid var(--grid);color:var(--steel);
+    padding:6px 8px;border-radius:4px;font-family:'IBM Plex Sans';font-size:16px;
+  }
+  .btn{
+    font-family:'IBM Plex Sans';font-weight:500;font-size:13px;
+    background:var(--panel-2);border:1px solid var(--grid);color:var(--steel);
+    padding:8px 13px;border-radius:4px;cursor:pointer;transition:.15s;
+  }
+  .btn:hover{border-color:var(--amber-dim);}
+  .btn.primary{background:var(--amber);border-color:var(--amber);color:#1a1305;font-weight:600;}
+  .btn.primary:hover{background:#ffbf2e;}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+
+  .grid2{display:grid;grid-template-columns:1.55fr 1fr;gap:18px;}
+  @media (max-width:880px){.grid2{grid-template-columns:1fr;}}
+
+  .panel{background:var(--panel);border:1px solid var(--grid);border-radius:6px;padding:18px;}
+  .panel h2{
+    font-family:'Barlow Condensed'; font-weight:600; font-size:18px; margin:0 0 4px; color:#f4f7f9;
+  }
+  .panel .meta{font-size:12.5px;color:var(--text-dim);margin:0 0 14px;font-family:'IBM Plex Mono';line-height:1.6;}
+
+  .instrument-svg{width:100%;height:auto;display:block;background:var(--panel-2);border:1px solid var(--grid);border-radius:5px;}
+
+  .dualWrap{display:flex;gap:14px;flex-wrap:wrap;}
+  .faceCol{flex:1 1 260px;min-width:240px;}
+  .faceLabel{font-family:'IBM Plex Sans';font-size:11.5px;font-weight:500;color:var(--amber);margin:0 0 5px;}
+
+  .help-toggle{margin-top:10px;font-size:12.5px;color:var(--text-dim);display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;}
+  .help-toggle input{accent-color:var(--amber);}
+
+  .instructions{
+    margin-top:12px;font-size:13px;color:var(--text-dim);line-height:1.55;
+    border-top:1px dashed var(--grid);padding-top:12px;
+  }
+
+  .reading-row{display:flex;gap:8px;margin-bottom:14px;align-items:stretch;}
+  .reading-row .seg{flex:none;}
+  .reading-row input[type=number]{
+    flex:1;background:var(--ink);border:1px solid var(--grid);color:var(--amber);
+    font-family:'IBM Plex Mono';font-weight:600;font-size:20px;
+    padding:10px 12px;border-radius:4px;min-width:0;
+  }
+  .reading-row input[type=number]:focus{outline:none;border-color:var(--amber);}
+  .unit-hint{font-size:11.5px;color:var(--text-dim);margin:-8px 0 14px;}
+
+  .feedback{
+    min-height:70px;border-radius:5px;padding:12px;margin-bottom:14px;
+    font-size:13.5px;line-height:1.5;
+    background:var(--panel-2);border:1px solid var(--grid);
+  }
+  .feedback.good{border-color:var(--good);}
+  .feedback.bad{border-color:var(--bad);}
+  .feedback .big{
+    font-family:'IBM Plex Mono';font-size:17px;font-weight:600;margin-bottom:4px;display:block;
+  }
+  .feedback.good .big{color:var(--good);}
+  .feedback.bad .big{color:var(--bad);}
+
+  .progress{font-size:12.5px;color:var(--text-dim);margin-bottom:10px;font-family:'IBM Plex Mono';}
+
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  th,td{text-align:left;padding:6px 6px;border-bottom:1px solid var(--grid);}
+  th{color:var(--text-dim);font-weight:500;font-family:'IBM Plex Sans';}
+  td{font-family:'IBM Plex Mono';color:var(--steel);}
+  .err-cell.good{color:var(--good);}
+  .err-cell.bad{color:var(--bad);}
+  .history-wrap{max-height:230px;overflow-y:auto;}
+
+  .summary{
+    background:var(--panel-2);border:1px solid var(--amber-dim);border-radius:5px;
+    padding:14px;margin-top:12px;font-size:13.5px;line-height:1.6;
+  }
+  .summary .big{font-family:'IBM Plex Mono';font-size:22px;color:var(--amber);font-weight:600;}
+
+  footer{margin-top:26px;font-size:12px;color:var(--text-dim);border-top:1px solid var(--grid);padding-top:14px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">MÓDULO DE METROLOGÍA · PROTOTIPO DE VALIDACIÓN</p>
+    <h1>Simulador de instrumentos de medición</h1>
+    <p class="sub">Práctica de lectura de vernier, micrómetro y comparador de carátula. Cada instrumento muestra su escala métrica (mm) y su escala en pulgadas (in) para la misma pieza — tú eliges en qué sistema respondes.</p>
+  </header>
+
+  <div class="toolbar">
+    <div class="tabs" id="tabs"></div>
+    <div class="seg" id="modeSeg">
+      <button data-mode="practica" class="active">Práctica</button>
+      <button data-mode="evaluacion">Evaluación</button>
+    </div>
+    <div class="spacer"></div>
+    <div class="field">Estudiante <input type="text" id="studentName" placeholder="Nombre (opcional)"></div>
+    <div class="field" id="lenField">Piezas
+      <select id="sessionLen">
+        <option value="5">5</option>
+        <option value="10" selected>10</option>
+        <option value="15">15</option>
+      </select>
+    </div>
+    <button class="btn" id="newPieceBtn">Nueva pieza</button>
+    <button class="btn" id="downloadBtn">Descargar resultados (CSV)</button>
+    <button class="btn" id="resetBtn">Reiniciar sesión</button>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2 id="instTitle">Calibrador vernier</h2>
+      <p class="meta" id="instMeta"></p>
+      <div id="svgHolder"></div>
+      <label class="help-toggle"><input type="checkbox" id="helpToggle"> Mostrar ayuda de alineación (línea de referencia)</label>
+      <div class="instructions" id="instructions"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Tu lectura</h2>
+      <p class="progress" id="progressLine">Pieza 1 · modo práctica</p>
+      <p class="progress" id="syncStatus" style="color:var(--text-dim);"></p>
+      <div class="reading-row">
+        <div class="seg" id="unitSeg">
+          <button data-unit="mm" class="active">mm</button>
+          <button data-unit="in">in</button>
+        </div>
+        <input type="number" step="0.01" id="readingInput" placeholder="0.00">
+        <button class="btn primary" id="submitBtn">Verificar</button>
+      </div>
+      <p class="unit-hint">Elige en qué unidad vas a responder (mm o in); ambas escalas del instrumento son válidas para leer.</p>
+      <div class="feedback" id="feedback">Escribe tu lectura y presiona Verificar.</div>
+      <div id="summaryHolder"></div>
+      <h2 style="margin-top:16px;">Bitácora de sesión</h2>
+      <div class="history-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Leído</th><th>Correcto</th><th>Error</th></tr></thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Prototipo desarrollado para el protocolo de investigación «Diseño y validación de un módulo virtual/interactivo para la enseñanza de instrumentos de medición mecánica». Cada instrumento se dibuja con su escala métrica y su escala en pulgadas sobre la misma pieza (resoluciones: vernier 0.05 mm / 1/128 in · micrómetro 0.01 mm / 0.001 in · comparador 0.01 mm / 0.001 in por vuelta). Estos valores pueden ajustarse según el instrumento real usado como referencia en la validación de expertos.
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // URL del Google Apps Script desplegado como aplicación web (recibe cada lectura y la agrega a la Hoja de Google).
+  const SHEETS_ENDPOINT = "https://script.google.com/macros/s/AKfycbz2C8sblpDSTh5OZg6NWDJPsJ53PkJEiL8lcOKx120uo9fNXQyXCYG21GWVl4hHHycICA/exec";
+
+  function sendToSheet(record){
+    const statusEl = document.getElementById("syncStatus");
+    if(!navigator.onLine){
+      if(statusEl) statusEl.innerHTML = "⚠ sin conexión — la lectura no se envió a la hoja. Descarga tu CSV como respaldo al terminar.";
+      return;
+    }
+    const studentName = document.getElementById("studentName").value.trim() || "anonimo";
+    fetch(SHEETS_ENDPOINT, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        estudiante: studentName,
+        instrumento: record.inst,
+        modo: record.mode,
+        unidad: record.unit,
+        valor_correcto: record.value,
+        lectura_estudiante: record.entered,
+        error: record.error,
+        timestamp: record.ts
+      })
+    }).then(()=>{
+      if(statusEl) statusEl.innerHTML = "✓ enviado a la hoja de registro";
+    }).catch(()=>{
+      if(statusEl) statusEl.innerHTML = "⚠ no se pudo enviar — descarga tu CSV como respaldo al terminar.";
+    });
+  }
+
+  const MM_PER_IN = 25.4;
+
+  // ---------- utilidades de formato ----------
+
+  function gcd(a,b){ return b ? gcd(b, a % b) : a; }
+
+  function formatInches(value){
+    const total128 = Math.round(value*128);
+    const whole = Math.floor(total128/128);
+    const rem = total128 - whole*128;
+    if(rem === 0) return `${whole} in`;
+    const g = gcd(rem, 128);
+    const num = rem/g, den = 128/g;
+    return whole > 0 ? `${whole} ${num}/${den} in` : `${num}/${den} in`;
+  }
+
+  // ---------- definición de instrumentos ----------
+  // Cada instrumento genera un valor canónico en mm (la posición física real de la pieza)
+  // y lo puede mostrar/calificar tanto en mm como en pulgadas (conversión exacta / 25.4).
+
+  const INSTRUMENTS = {
+    vernier: {
+      label: "Calibrador vernier (doble escala)",
+      metaMM: "escala métrica · resolución 0.05 mm · rango 0–150 mm",
+      metaIN: "escala en pulgadas · resolución 1/128 in (0.0078 in) · rango 0–6 in",
+      units: {
+        mm: { resolution: 0.05, decimals: 2 },
+        in: { resolution: 1/128, decimals: 4 }
+      },
+      instructions: "Este calibrador tiene dos escalas grabadas sobre el mismo cuerpo, arriba en milímetros y abajo en pulgadas — ambas describen la misma posición de la mordaza. Escala métrica: cuenta los milímetros completos antes del cero del nonio; busca qué línea del nonio (0–20) coincide exactamente con una línea de la escala fija — ese número son las centésimas de milímetro (resolución 0.05 mm) que sumas. Escala en pulgadas: cuenta los dieciseisavos completos antes del cero del nonio inferior; el nonio de 8 divisiones indica múltiplos de 1/128\" a sumar. Elige con el selector mm/in en qué sistema vas a responder.",
+      genValueMM(){
+        const steps = Math.floor(Math.random()*3001); // 0..150mm en pasos de 0.05mm
+        return steps*0.05;
+      },
+      render(valueMM, showHelp){ return renderVernierDual(valueMM, showHelp); }
+    },
+    micrometro: {
+      label: "Micrómetro (doble escala)",
+      metaMM: "escala mm · resolución 0.01 mm · rango 0–25 mm",
+      metaIN: "escala en pulgadas · resolución 0.001 in · rango 0–1 in",
+      units: {
+        mm: { resolution: 0.01, decimals: 2 },
+        in: { resolution: 0.001, decimals: 3 }
+      },
+      instructions: "Se muestran dos micrómetros con la misma lectura física: uno graduado en mm y otro en pulgadas. Escala mm: lee en el manguito el último milímetro y, si está visible, la marca de 0.5 mm; en el tambor (50 divisiones) lee qué número coincide con la línea de referencia — son centésimas de mm. Escala pulgadas: lee en el manguito el último 0.1\" y, si está visible, la marca de 0.025\" siguiente; en el tambor (25 divisiones) lee las milésimas de pulgada. Suma ambas partes en el sistema que elijas para responder.",
+      genValueMM(){ const v = Math.random()*25; return Math.round(v*100)/100; },
+      render(valueMM, showHelp){ return renderMicrometerDual(valueMM, showHelp); }
+    },
+    comparador: {
+      label: "Comparador de carátula (doble escala)",
+      metaMM: "escala mm · resolución 0.01 mm/vuelta · rango 0–10 mm",
+      metaIN: "escala en pulgadas · resolución 0.001 in/vuelta · rango 0–0.5 in (≈12.7 mm)",
+      units: {
+        mm: { resolution: 0.01, decimals: 2 },
+        in: { resolution: 0.001, decimals: 3 }
+      },
+      instructions: "Se muestran dos comparadores de carátula con la misma lectura física. Escala mm: el dial pequeño indica los milímetros enteros (vueltas completas) y el dial grande las centésimas de mm. Escala pulgadas: el dial pequeño indica las décimas de pulgada (una vuelta completa del dial grande equivale a 0.1\") y el dial grande las milésimas de pulgada. Suma ambas partes en el sistema que elijas para responder.",
+      genValueMM(){ const v = Math.random()*10; return Math.round(v*100)/100; },
+      render(valueMM, showHelp){ return renderComparadorDual(valueMM, showHelp); }
+    }
+  };
+
+  const state = {
+    instrument: "vernier",
+    mode: "practica",
+    currentValueMM: null,
+    answerUnit: "mm",
+    unitByInst: { vernier: "mm", micrometro: "mm", comparador: "mm" },
+    history: [],          // {inst, mode, unit, value, entered, error, ts}
+    evalTarget: 10,
+    evalCount: 0,
+    evalActive: false
+  };
+
+  // ---------- SVG: calibrador vernier (doble escala, un solo cuerpo) ----------
+
+  function renderVernierDual(valueMM, showHelp){
+    const pxPerMM = 5, marginL = 34;
+    const rangeMM = 150, rangeIN = 6;
+    const pxPerIN = pxPerMM*MM_PER_IN;
+    const width = marginL*2 + Math.max(rangeMM*pxPerMM, rangeIN*pxPerIN);
+    const height = 210;
+    const yMM = 40, yIN = 138;
+    const valueIN = valueMM/MM_PER_IN;
+
+    // escala fija métrica
+    let mmTicks = "", mmLabels = "";
+    for(let mm=0; mm<=rangeMM; mm++){
+      const x = marginL + mm*pxPerMM;
+      const isMajor = mm%10===0, isMid = mm%5===0;
+      const h = isMajor?20:(isMid?14:9);
+      mmTicks += `<line x1="${x}" y1="${yMM}" x2="${x}" y2="${yMM+h}" stroke="#dbe4ea" stroke-width="${isMajor?1.4:1}"/>`;
+      if(isMajor) mmLabels += `<text x="${x}" y="${yMM-6}" font-family="IBM Plex Mono" font-size="9.5" fill="#8ea0b3" text-anchor="middle">${mm}</text>`;
+    }
+    const RES_MM = 0.05, N_MM = 20; // 1mm / 20 = 0.05mm de resolución
+    const zeroXmm = marginL + valueMM*pxPerMM;
+    const stepsMM = Math.round(valueMM/RES_MM);
+    const n0mm = ((stepsMM % N_MM) + N_MM) % N_MM;
+    const vernStepPxMM = ((N_MM-1)/N_MM)*pxPerMM;
+    let vernTicksMM = "", vernLabelsMM = "";
+    for(let i=0;i<=N_MM;i++){
+      const x = zeroXmm + i*vernStepPxMM;
+      const isMark = i%5===0;
+      vernTicksMM += `<line x1="${x}" y1="${yMM+40}" x2="${x}" y2="${yMM+40-(isMark?16:10)}" stroke="#f2a900" stroke-width="${i===n0mm?2.2:1.1}"/>`;
+      if(isMark || i===n0mm) vernLabelsMM += `<text x="${x}" y="${yMM+55}" font-family="IBM Plex Mono" font-size="8" fill="${i===n0mm?'#f2a900':'#8ea0b3'}" text-anchor="middle">${i}</text>`;
+    }
+    const helpMM = showHelp ? `<line x1="${zeroXmm+n0mm*vernStepPxMM}" y1="${yMM-24}" x2="${zeroXmm+n0mm*vernStepPxMM}" y2="${yMM+62}" stroke="#5fb488" stroke-width="1" stroke-dasharray="3,3"/>` : "";
+
+    // escala fija en pulgadas (dieciseisavos)
+    let inTicks = "", inLabels = "";
+    const totalSixteenths = rangeIN*16;
+    const pxPerSixteenth = pxPerIN/16;
+    for(let s=0;s<=totalSixteenths;s++){
+      const x = marginL + s*pxPerSixteenth;
+      const isWhole = s%16===0, isHalf = s%8===0, isQuarter = s%4===0, isEighth = s%2===0;
+      const h = isWhole?20:(isHalf?15:(isQuarter?12:(isEighth?9:6)));
+      inTicks += `<line x1="${x}" y1="${yIN}" x2="${x}" y2="${yIN+h}" stroke="#dbe4ea" stroke-width="${isWhole?1.4:1}"/>`;
+      if(isWhole) inLabels += `<text x="${x}" y="${yIN-6}" font-family="IBM Plex Mono" font-size="9.5" fill="#8ea0b3" text-anchor="middle">${s/16}"</text>`;
+    }
+    const RES_IN = 1/128, N_IN = 8;
+    const zeroXin = marginL + valueIN*pxPerIN;
+    const stepsIN = Math.round(valueIN/RES_IN);
+    const n0in = ((stepsIN % N_IN) + N_IN) % N_IN;
+    const vernStepPxIN = (7/128)*pxPerIN;
+    let vernTicksIN = "", vernLabelsIN = "";
+    for(let i=0;i<=8;i++){
+      const x = zeroXin + i*vernStepPxIN;
+      const isMark = i%4===0;
+      vernTicksIN += `<line x1="${x}" y1="${yIN+40}" x2="${x}" y2="${yIN+40-(isMark?16:10)}" stroke="#f2a900" stroke-width="${i===n0in?2.2:1.1}"/>`;
+      if(isMark || i===n0in) vernLabelsIN += `<text x="${x}" y="${yIN+55}" font-family="IBM Plex Mono" font-size="8" fill="${i===n0in?'#f2a900':'#8ea0b3'}" text-anchor="middle">${i}</text>`;
+    }
+    const helpIN = showHelp ? `<line x1="${zeroXin+n0in*vernStepPxIN}" y1="${yIN-24}" x2="${zeroXin+n0in*vernStepPxIN}" y2="${yIN+62}" stroke="#5fb488" stroke-width="1" stroke-dasharray="3,3"/>` : "";
+
+    const pieceW = valueMM*pxPerMM;
+    // guía vertical que conecta ambas escalas: es la misma posición física en ambos sistemas
+    const guide = `<line x1="${zeroXmm}" y1="${yMM+2}" x2="${zeroXmm}" y2="${yIN-22}" stroke="#f2a900" stroke-width="1" opacity=".25" stroke-dasharray="2,3"/>`;
+
+    return `<svg class="instrument-svg" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+      <rect x="${marginL-4}" y="${yMM-30}" width="${pieceW+4}" height="${(yIN+40)-(yMM-30)}" fill="#3a4a58" opacity=".5" stroke="#33465a"/>
+      <text x="${marginL+pieceW/2}" y="${yMM-36}" font-family="IBM Plex Sans" font-size="10" fill="#8ea0b3" text-anchor="middle">pieza</text>
+      ${guide}
+
+      <text x="${marginL}" y="${yMM-18}" font-family="IBM Plex Sans" font-size="10.5" fill="#f2a900">escala métrica (mm)</text>
+      <line x1="${marginL}" y1="${yMM}" x2="${marginL+rangeMM*pxPerMM}" y2="${yMM}" stroke="#dbe4ea" stroke-width="1.4"/>
+      ${mmTicks}${mmLabels}
+      ${vernTicksMM}${vernLabelsMM}${helpMM}
+
+      <text x="${marginL}" y="${yIN-18}" font-family="IBM Plex Sans" font-size="10.5" fill="#f2a900">escala en pulgadas (in)</text>
+      <line x1="${marginL}" y1="${yIN}" x2="${marginL+rangeIN*pxPerIN}" y2="${yIN}" stroke="#dbe4ea" stroke-width="1.4"/>
+      ${inTicks}${inLabels}
+      ${vernTicksIN}${vernLabelsIN}${helpIN}
+    </svg>`;
+  }
+
+  // ---------- SVG: micrómetro (una cara por unidad) ----------
+
+  function micrometerFace(value, o){
+    const marginL = 28, marginT = 28;
+    const width = marginL*2 + o.rangeMax*o.pxPerUnit + 230;
+    const height = 195;
+    const sleeveSteps = Math.floor(value*o.stepsPerUnit + 1e-9);
+    let sleeveReading = sleeveSteps/o.stepsPerUnit;
+    let thimbleReading = Math.round((value - sleeveReading)*o.thimbleMultiplier);
+    if(thimbleReading >= o.thimbleDivisions){ sleeveReading += 1/o.stepsPerUnit; thimbleReading = 0; }
+
+    let ticks = "", labels = "";
+    const totalMinor = Math.round(o.rangeMax*o.stepsPerUnit);
+    for(let k=0;k<=totalMinor;k++){
+      const u = k/o.stepsPerUnit, x = marginL + u*o.pxPerUnit;
+      const isMajor = k % o.majorEveryK === 0;
+      const h = isMajor?20:12;
+      ticks += `<line x1="${x}" y1="${marginT}" x2="${x}" y2="${marginT+h}" stroke="#dbe4ea" stroke-width="${isMajor?1.3:1}"/>`;
+      if(isMajor) labels += `<text x="${x}" y="${marginT-6}" font-family="IBM Plex Mono" font-size="9.5" fill="#8ea0b3" text-anchor="middle">${o.majorLabel(u)}</text>`;
+    }
+    const sleeveX = marginL + sleeveReading*o.pxPerUnit;
+    const thimbleEdge = `<rect x="${sleeveX}" y="${marginT-4}" width="${o.rangeMax*o.pxPerUnit}" height="26" fill="#3a4a58" opacity=".9"/>
+      <line x1="${sleeveX}" y1="${marginT-4}" x2="${sleeveX}" y2="${marginT+22}" stroke="#f2a900" stroke-width="2"/>`;
+
+    const cx = marginL + o.rangeMax*o.pxPerUnit + 112, cy = marginT + 78, r = 68;
+    const angleOffset = -(thimbleReading/o.thimbleDivisions)*360;
+    let dialTicks = "";
+    for(let i=0;i<o.thimbleDivisions;i++){
+      const ang = (i/o.thimbleDivisions)*360 + angleOffset - 90, rad = ang*Math.PI/180;
+      const isMark = i%5===0;
+      const rr1 = r, rr2 = isMark? r-11 : r-6;
+      const x1c = cx+rr1*Math.cos(rad), y1c = cy+rr1*Math.sin(rad);
+      const x2c = cx+rr2*Math.cos(rad), y2c = cy+rr2*Math.sin(rad);
+      dialTicks += `<line x1="${x1c}" y1="${y1c}" x2="${x2c}" y2="${y2c}" stroke="${i===0?'#f2a900':'#dbe4ea'}" stroke-width="${i===0?2.2:1}"/>`;
+      if(isMark){
+        const lx = cx+(r-21)*Math.cos(rad), ly = cy+(r-21)*Math.sin(rad);
+        dialTicks += `<text x="${lx}" y="${ly+3}" font-family="IBM Plex Mono" font-size="8.5" fill="#8ea0b3" text-anchor="middle">${i}</text>`;
+      }
+    }
+    const help = o.showHelp ? `<circle cx="${cx}" cy="${cy}" r="${r+6}" fill="none" stroke="#5fb488" stroke-width="1" stroke-dasharray="4,3"/>` : "";
+
+    return `<svg class="instrument-svg" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+      <line x1="${marginL}" y1="${marginT}" x2="${marginL+o.rangeMax*o.pxPerUnit}" y2="${marginT}" stroke="#dbe4ea" stroke-width="1.3"/>
+      ${ticks}${labels}
+      ${thimbleEdge}
+      <circle cx="${cx}" cy="${cy}" r="${r+14}" fill="#1f2e3d" stroke="#33465a"/>
+      ${dialTicks}
+      <line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy-r+8}" stroke="#f2a900" stroke-width="2"/>
+      <circle cx="${cx}" cy="${cy}" r="3.2" fill="#f2a900"/>
+      <text x="${cx}" y="${cy+r+28}" font-family="IBM Plex Sans" font-size="10" fill="#8ea0b3" text-anchor="middle">tambor</text>
+      <text x="${marginL+o.rangeMax*o.pxPerUnit/2}" y="${marginT+46}" font-family="IBM Plex Sans" font-size="10" fill="#8ea0b3" text-anchor="middle">manguito (${o.unitLabel})</text>
+      ${help}
+    </svg>`;
+  }
+
+  function renderMicrometerDual(valueMM, showHelp){
+    const valueIN = valueMM/MM_PER_IN;
+    const svgMM = micrometerFace(valueMM, {
+      rangeMax: 25, pxPerUnit: 20, stepsPerUnit: 2, majorEveryK: 10,
+      thimbleDivisions: 50, thimbleMultiplier: 100,
+      unitLabel: "mm", majorLabel: u => Math.round(u), showHelp
+    });
+    const svgIN = micrometerFace(valueIN, {
+      rangeMax: 1, pxPerUnit: 380, stepsPerUnit: 40, majorEveryK: 4,
+      thimbleDivisions: 25, thimbleMultiplier: 1000,
+      unitLabel: "in", majorLabel: u => u.toFixed(1), showHelp
+    });
+    return `<div class="dualWrap">
+      <div class="faceCol"><p class="faceLabel">Escala métrica (mm)</p>${svgMM}</div>
+      <div class="faceCol"><p class="faceLabel">Escala en pulgadas (in)</p>${svgIN}</div>
+    </div>`;
+  }
+
+  // ---------- SVG: comparador de carátula (una cara por unidad) ----------
+
+  function comparadorFace(value, o){
+    const width = 320, height = 225;
+    const cx = width/2, cy = 112, r = o.r;
+    const mainPos = ((Math.round(value/o.resolutionPerDiv) % o.mainDivisions) + o.mainDivisions) % o.mainDivisions;
+    const revolution = Math.floor(value/o.unitPerRev + 1e-9);
+    const mainAngle = (mainPos/o.mainDivisions)*360 - 90;
+    let dialTicks = "";
+    for(let i=0;i<o.mainDivisions;i++){
+      const ang = (i/o.mainDivisions)*360 - 90, rad = ang*Math.PI/180;
+      const isMark = i%10===0;
+      const rr1 = r, rr2 = isMark? r-13 : (i%5===0? r-9 : r-5);
+      const x1c = cx+rr1*Math.cos(rad), y1c = cy+rr1*Math.sin(rad);
+      const x2c = cx+rr2*Math.cos(rad), y2c = cy+rr2*Math.sin(rad);
+      dialTicks += `<line x1="${x1c}" y1="${y1c}" x2="${x2c}" y2="${y2c}" stroke="#dbe4ea" stroke-width="${isMark?1.5:1}"/>`;
+      if(isMark){
+        const lx = cx+(r-24)*Math.cos(rad), ly = cy+(r-24)*Math.sin(rad);
+        dialTicks += `<text x="${lx}" y="${ly+3}" font-family="IBM Plex Mono" font-size="9.5" fill="#8ea0b3" text-anchor="middle">${i}</text>`;
+      }
+    }
+    const scx = cx, scy = cy+34, sr = 23;
+    let subTicks = "";
+    for(let i=0;i<o.subCount;i++){
+      const ang = (i/o.subCount)*360 - 90, rad = ang*Math.PI/180;
+      const x1c = scx+sr*Math.cos(rad), y1c = scy+sr*Math.sin(rad);
+      const x2c = scx+(sr-6)*Math.cos(rad), y2c = scy+(sr-6)*Math.sin(rad);
+      subTicks += `<line x1="${x1c}" y1="${y1c}" x2="${x2c}" y2="${y2c}" stroke="#dbe4ea" stroke-width="1"/>`;
+      subTicks += `<text x="${scx+(sr-13)*Math.cos(rad)}" y="${scy+(sr-13)*Math.sin(rad)+3}" font-family="IBM Plex Mono" font-size="7" fill="#8ea0b3" text-anchor="middle">${i}</text>`;
+    }
+    const subAngle = ((((revolution % o.subCount)+o.subCount)%o.subCount)/o.subCount)*360 - 90;
+    const help = o.showHelp ? `<circle cx="${cx}" cy="${cy}" r="${r+8}" fill="none" stroke="#5fb488" stroke-width="1" stroke-dasharray="4,3"/>` : "";
+
+    return `<svg class="instrument-svg" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="${cx}" cy="${cy}" r="${r+16}" fill="#243546" stroke="#33465a"/>
+      ${dialTicks}
+      <circle cx="${scx}" cy="${scy}" r="${sr+6}" fill="#1f2e3d" stroke="#33465a"/>
+      ${subTicks}
+      <line x1="${scx}" y1="${scy}" x2="${scx+(sr-7)*Math.cos(subAngle*Math.PI/180)}" y2="${scy+(sr-7)*Math.sin(subAngle*Math.PI/180)}" stroke="#f2a900" stroke-width="1.6"/>
+      <line x1="${cx}" y1="${cy}" x2="${cx+(r-13)*Math.cos(mainAngle*Math.PI/180)}" y2="${cy+(r-13)*Math.sin(mainAngle*Math.PI/180)}" stroke="#f2a900" stroke-width="2.3"/>
+      <circle cx="${cx}" cy="${cy}" r="3.6" fill="#f2a900"/>
+      <text x="${cx}" y="${cy+r+36}" font-family="IBM Plex Sans" font-size="10.5" fill="#8ea0b3" text-anchor="middle">${o.mainDialLabel}</text>
+      <text x="${cx}" y="18" font-family="IBM Plex Sans" font-size="10.5" fill="#8ea0b3" text-anchor="middle">${o.subDialLabel}</text>
+      ${help}
+    </svg>`;
+  }
+
+  function renderComparadorDual(valueMM, showHelp){
+    const valueIN = valueMM/MM_PER_IN;
+    const svgMM = comparadorFace(valueMM, {
+      resolutionPerDiv: 0.01, mainDivisions: 100, unitPerRev: 1, subCount: 10, r: 82,
+      mainDialLabel: "dial principal · centésimas (mm)", subDialLabel: "dial pequeño = mm enteros (vueltas)", showHelp
+    });
+    const svgIN = comparadorFace(valueIN, {
+      resolutionPerDiv: 0.001, mainDivisions: 100, unitPerRev: 0.1, subCount: 10, r: 82,
+      mainDialLabel: "dial principal · milésimas (in)", subDialLabel: "dial pequeño = décimas de in (vueltas)", showHelp
+    });
+    return `<div class="dualWrap">
+      <div class="faceCol"><p class="faceLabel">Escala métrica (mm)</p>${svgMM}</div>
+      <div class="faceCol"><p class="faceLabel">Escala en pulgadas (in)</p>${svgIN}</div>
+    </div>`;
+  }
+
+  // ---------- app logic ----------
+
+  function buildTabs(){
+    const tabsEl = document.getElementById("tabs");
+    tabsEl.innerHTML = "";
+    Object.keys(INSTRUMENTS).forEach(key=>{
+      const b = document.createElement("button");
+      b.className = "tab" + (key===state.instrument?" active":"");
+      b.textContent = INSTRUMENTS[key].label;
+      b.onclick = ()=>{ if(state.evalActive) return; state.instrument = key; newPiece(); buildTabs(); };
+      tabsEl.appendChild(b);
+    });
+  }
+
+  function updateUnitUI(){
+    const inst = INSTRUMENTS[state.instrument];
+    document.querySelectorAll("#unitSeg button").forEach(b=>b.classList.toggle("active", b.dataset.unit===state.answerUnit));
+    const uConf = inst.units[state.answerUnit];
+    const input = document.getElementById("readingInput");
+    input.step = uConf.resolution;
+    input.placeholder = (0).toFixed(uConf.decimals);
+  }
+
+  function setUnitSegDisabled(disabled){
+    document.querySelectorAll("#unitSeg button").forEach(b=>b.disabled = disabled);
+  }
+
+  function newPiece(){
+    const inst = INSTRUMENTS[state.instrument];
+    state.currentValueMM = inst.genValueMM();
+    state.answerUnit = state.unitByInst[state.instrument] || "mm";
+    document.getElementById("instTitle").textContent = inst.label;
+    document.getElementById("instMeta").innerHTML = `${inst.metaMM}<br>${inst.metaIN}`;
+    document.getElementById("instructions").textContent = inst.instructions;
+    document.getElementById("readingInput").value = "";
+    updateUnitUI();
+    document.getElementById("feedback").className = "feedback";
+    document.getElementById("feedback").innerHTML = "Escribe tu lectura y presiona Verificar.";
+    document.getElementById("summaryHolder").innerHTML = "";
+    renderSVG();
+    updateProgressLine();
+  }
+
+  function renderSVG(){
+    const inst = INSTRUMENTS[state.instrument];
+    const showHelp = document.getElementById("helpToggle").checked && state.mode==="practica";
+    document.getElementById("svgHolder").innerHTML = inst.render(state.currentValueMM, showHelp);
+  }
+
+  function updateProgressLine(){
+    const line = document.getElementById("progressLine");
+    if(state.mode==="practica"){
+      line.textContent = `Modo práctica · pieza libre · ${state.history.filter(h=>h.mode==='practica' && h.inst===state.instrument).length} lecturas registradas`;
+    } else {
+      line.textContent = `Modo evaluación · pieza ${state.evalCount} de ${state.evalTarget}`;
+    }
+  }
+
+  function correctValueInUnit(unit){
+    return unit==="mm" ? state.currentValueMM : state.currentValueMM/MM_PER_IN;
+  }
+
+  function submitReading(){
+    const inst = INSTRUMENTS[state.instrument];
+    const unit = state.answerUnit;
+    const uConf = inst.units[unit];
+    const raw = document.getElementById("readingInput").value;
+    if(raw === "") return;
+    const entered = parseFloat(raw);
+    const correct = correctValueInUnit(unit);
+    const error = Math.round(Math.abs(entered-correct)*100000)/100000;
+    const record = { inst: state.instrument, mode: state.mode, unit, value: correct, entered, error, ts: new Date().toISOString() };
+    state.history.push(record);
+    sendToSheet(record);
+
+    const fb = document.getElementById("feedback");
+    const correctLabel = (state.instrument === "vernier" && unit === "in")
+      ? `${formatInches(correct)} (${correct.toFixed(4)} in)`
+      : `${correct.toFixed(uConf.decimals)} ${unit}`;
+    if(state.mode === "practica"){
+      const okness = error <= uConf.resolution + 1e-6;
+      fb.className = "feedback " + (okness?"good":"bad");
+      fb.innerHTML = `<span class="big">${okness? "Correcto" : "Fuera de tolerancia"}</span>
+        Valor real: ${correctLabel} · Tu lectura: ${entered.toFixed(uConf.decimals)} ${unit} · Error: ${error.toFixed(uConf.decimals)} ${unit}`;
+      renderHistory();
+      updateProgressLine();
+    } else {
+      state.evalCount++;
+      fb.className = "feedback";
+      fb.innerHTML = `Lectura registrada (${state.evalCount} de ${state.evalTarget}). Continúa con la siguiente pieza.`;
+      document.getElementById("readingInput").value = "";
+      if(state.evalCount >= state.evalTarget){
+        finishEvaluation();
+        return;
+      }
+      newPieceKeepMode();
+    }
+  }
+
+  function newPieceKeepMode(){
+    const inst = INSTRUMENTS[state.instrument];
+    state.currentValueMM = inst.genValueMM();
+    renderSVG();
+    updateProgressLine();
+  }
+
+  function finishEvaluation(){
+    const inst = INSTRUMENTS[state.instrument];
+    state.evalActive = false;
+    document.getElementById("submitBtn").disabled = true;
+    document.getElementById("readingInput").disabled = true;
+    setUnitSegDisabled(true);
+    const recs = state.history.filter(h=>h.mode==="evaluacion" && h.inst===state.instrument).slice(-state.evalTarget);
+    const errs = recs.map(r=>r.error);
+    const mean = errs.reduce((a,b)=>a+b,0)/errs.length;
+    const max = Math.max(...errs);
+    const withinTol = recs.filter(r=> r.error <= inst.units[r.unit].resolution + 1e-6).length;
+    const unitUsed = recs.length && recs.every(r=>r.unit===recs[0].unit) ? recs[0].unit : "mixto";
+    document.getElementById("feedback").className = "feedback good";
+    document.getElementById("feedback").innerHTML = `<span class="big">Evaluación completa</span>Se registraron ${recs.length} lecturas.`;
+    document.getElementById("summaryHolder").innerHTML = `
+      <div class="summary">
+        <div class="big">${mean.toFixed(4)} ${unitUsed !== "mixto" ? unitUsed : ""}</div>
+        error medio absoluto de lectura${unitUsed !== "mixto" ? "" : " (unidades mixtas — evita cambiar de unidad a mitad de una evaluación)"}<br>
+        error máximo: ${max.toFixed(4)} · lecturas dentro de tolerancia: ${withinTol}/${recs.length}
+      </div>`;
+    renderHistory();
+  }
+
+  function renderHistory(){
+    const body = document.getElementById("historyBody");
+    const rows = state.history.filter(h=>h.inst===state.instrument).slice(-30).reverse();
+    const inst = INSTRUMENTS[state.instrument];
+    body.innerHTML = rows.map((r,idx)=>{
+      const uConf = inst.units[r.unit];
+      const okness = r.error <= uConf.resolution + 1e-6;
+      return `<tr><td>${rows.length-idx}</td><td>${r.entered.toFixed(uConf.decimals)} ${r.unit}</td><td>${r.value.toFixed(uConf.decimals)} ${r.unit}</td><td class="err-cell ${okness?'good':'bad'}">${r.error.toFixed(uConf.decimals)}</td></tr>`;
+    }).join("");
+  }
+
+  function startEvaluation(){
+    state.evalTarget = parseInt(document.getElementById("sessionLen").value, 10);
+    state.evalCount = 0;
+    state.evalActive = true;
+    document.getElementById("submitBtn").disabled = false;
+    document.getElementById("readingInput").disabled = false;
+    document.getElementById("summaryHolder").innerHTML = "";
+    setUnitSegDisabled(true);
+    newPieceKeepMode();
+    updateProgressLine();
+  }
+
+  function setMode(mode){
+    state.mode = mode;
+    document.querySelectorAll("#modeSeg button").forEach(b=>b.classList.toggle("active", b.dataset.mode===mode));
+    document.getElementById("lenField").style.display = mode==="evaluacion" ? "flex" : "none";
+    document.getElementById("newPieceBtn").style.display = mode==="practica" ? "inline-block" : "none";
+    document.getElementById("summaryHolder").innerHTML = "";
+    document.getElementById("submitBtn").textContent = mode==="practica" ? "Verificar" : "Registrar";
+    if(mode==="evaluacion"){
+      startEvaluation();
+    } else {
+      state.evalActive = false;
+      document.getElementById("submitBtn").disabled = false;
+      document.getElementById("readingInput").disabled = false;
+      setUnitSegDisabled(false);
+      newPiece();
+    }
+  }
+
+  function downloadCSV(){
+    if(state.history.length===0){ alert("Todavía no hay lecturas registradas."); return; }
+    const name = document.getElementById("studentName").value.trim() || "anonimo";
+    let csv = "estudiante,instrumento,modo,unidad,valor_correcto,lectura_estudiante,error,valor_correcto_mm,timestamp\n";
+    state.history.forEach(r=>{
+      const mmVal = r.unit==="mm" ? r.value : r.value*MM_PER_IN;
+      csv += `${name},${r.inst},${r.mode},${r.unit},${r.value.toFixed(4)},${r.entered.toFixed(4)},${r.error.toFixed(4)},${mmVal.toFixed(4)},${r.ts}\n`;
+    });
+    const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `resultados_${name.replace(/\s+/g,"_")}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function resetSession(){
+    state.history = state.history.filter(h=>false); // clear all
+    state.evalActive = false;
+    state.evalCount = 0;
+    document.getElementById("submitBtn").disabled = false;
+    document.getElementById("readingInput").disabled = false;
+    document.getElementById("summaryHolder").innerHTML = "";
+    setUnitSegDisabled(false);
+    setMode("practica");
+    document.querySelectorAll("#modeSeg button").forEach(b=>b.classList.toggle("active", b.dataset.mode==="practica"));
+  }
+
+  // ---------- events ----------
+
+  document.getElementById("modeSeg").addEventListener("click", (e)=>{
+    const btn = e.target.closest("button");
+    if(!btn) return;
+    setMode(btn.dataset.mode);
+  });
+  document.getElementById("unitSeg").addEventListener("click", (e)=>{
+    const btn = e.target.closest("button");
+    if(!btn || btn.disabled) return;
+    state.answerUnit = btn.dataset.unit;
+    state.unitByInst[state.instrument] = state.answerUnit;
+    updateUnitUI();
+  });
+  document.getElementById("newPieceBtn").addEventListener("click", newPiece);
+  document.getElementById("submitBtn").addEventListener("click", submitReading);
+  document.getElementById("readingInput").addEventListener("keydown", (e)=>{ if(e.key==="Enter") submitReading(); });
+  document.getElementById("helpToggle").addEventListener("change", renderSVG);
+  document.getElementById("downloadBtn").addEventListener("click", downloadCSV);
+  document.getElementById("resetBtn").addEventListener("click", resetSession);
+
+  // ---------- init ----------
+  buildTabs();
+  document.getElementById("lenField").style.display = "none";
+  newPiece();
+
+  if("serviceWorker" in navigator){
+    window.addEventListener("load", ()=>{
+      navigator.serviceWorker.register("sw.js").catch(()=>{ /* sin servidor no hay SW; la app sigue funcionando */ });
+    });
+  }
+})();
+</script>
+</body>
+</html>
