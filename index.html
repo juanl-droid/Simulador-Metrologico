@@ -286,6 +286,7 @@
         instrumento: record.inst,
         modo: record.mode,
         unidad: record.unit,
+        unidad_texto: record.unitDisplay || "",
         valor_correcto: record.value,
         lectura_estudiante: record.entered,
         lectura_texto: record.enteredDisplay || "",
@@ -718,7 +719,8 @@
     const correct = correctValueInUnit(unit);
     const error = Math.round(Math.abs(entered-correct)*100000)/100000;
     const enteredDisplay = uConf.isFraction ? raw.trim() : entered.toFixed(uConf.decimals) + " " + unit;
-    const record = { inst: state.instrument, mode: state.mode, unit, value: correct, entered, enteredDisplay, error, ts: new Date().toISOString() };
+    const unitDisplay = UNIT_NAMES[unit] || unit;
+    const record = { inst: state.instrument, mode: state.mode, unit, unitDisplay, value: correct, entered, enteredDisplay, error, ts: new Date().toISOString() };
     state.history.push(record);
     sendToSheet(record);
 
@@ -828,11 +830,12 @@
   function downloadCSV(){
     if(state.history.length===0){ alert("Todavía no hay lecturas registradas."); return; }
     const name = document.getElementById("studentName").value.trim() || "anonimo";
-    let csv = "estudiante,instrumento,modo,unidad,valor_correcto,lectura_estudiante,lectura_texto,error,valor_correcto_mm,timestamp\n";
+    let csv = "estudiante,instrumento,modo,unidad,unidad_texto,valor_correcto,lectura_estudiante,lectura_texto,error,valor_correcto_mm,timestamp\n";
     state.history.forEach(r=>{
       const mmVal = r.unit==="mm" ? r.value : r.value*MM_PER_IN;
       const texto = (r.enteredDisplay || "").replace(/,/g, ";");
-      csv += `${name},${r.inst},${r.mode},${r.unit},${r.value.toFixed(4)},${r.entered.toFixed(4)},${texto},${r.error.toFixed(4)},${mmVal.toFixed(4)},${r.ts}\n`;
+      const unidadTexto = (r.unitDisplay || UNIT_NAMES[r.unit] || r.unit).replace(/,/g, ";");
+      csv += `${name},${r.inst},${r.mode},${r.unit},${unidadTexto},${r.value.toFixed(4)},${r.entered.toFixed(4)},${texto},${r.error.toFixed(4)},${mmVal.toFixed(4)},${r.ts}\n`;
     });
     const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
     const url = URL.createObjectURL(blob);
