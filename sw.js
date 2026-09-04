@@ -1,4 +1,4 @@
-const CACHE_NAME = "metrologia-sim-v1";
+const CACHE_NAME = "metrologia-sim-v2";
 const CORE_ASSETS = [
   "./index.html",
   "./manifest.webmanifest",
@@ -17,19 +17,42 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((names) =>
-      Promise.all(names.filter((n) => n !== CACHE_NAME).map((n) => caches.delete(n)))
-    )
+    caches.keys()
+      .then((names) =>
+        Promise.all(names.filter((n) => n !== CACHE_NAME).map((n) => caches.delete(n)))
+      )
+      .then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+
+  const isHTML =
+    event.request.mode === "navigate" ||
+    (event.request.headers.get("accept") || "").includes("text/html");
+
+  if (isHTML) {
+    // Página principal: red primero, para que cada visita cargue la versión más
+    // reciente publicada. Solo si no hay conexión se usa la copia guardada
+    // (por eso el simulador sigue funcionando sin internet).
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Otros archivos (íconos, manifest): se muestran al instante desde caché y,
+  // en paralelo, se refrescan en segundo plano para la próxima vez.
   event.respondWith(
     caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request)
+      const network = fetch(event.request)
         .then((response) => {
           if (response && response.status === 200 && response.type === "basic") {
             const clone = response.clone();
@@ -38,6 +61,7 @@ self.addEventListener("fetch", (event) => {
           return response;
         })
         .catch(() => cached);
+      return cached || network;
     })
   );
 });
