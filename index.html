@@ -276,6 +276,7 @@
       return;
     }
     const studentName = document.getElementById("studentName").value.trim() || "anonimo";
+    const mmVal = record.unit==="mm" ? record.value : record.value*MM_PER_IN;
     fetch(SHEETS_ENDPOINT, {
       method: "POST",
       mode: "no-cors",
@@ -287,7 +288,9 @@
         unidad: record.unit,
         valor_correcto: record.value,
         lectura_estudiante: record.entered,
+        lectura_texto: record.enteredDisplay || "",
         error: record.error,
+        valor_correcto_mm: mmVal,
         timestamp: record.ts
       })
     }).then(()=>{
