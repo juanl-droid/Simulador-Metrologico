@@ -103,6 +103,12 @@
   .seg button.active{background:var(--amber);color:#1a1305;}
   .seg button:disabled{opacity:.4;cursor:not-allowed;}
 
+  .scaleSeg{width:100%;margin-bottom:12px;border-radius:6px;}
+  .scaleSeg button{
+    flex:1 1 33%;font-family:'Barlow Condensed', sans-serif;font-weight:600;
+    font-size:14.5px;letter-spacing:.01em;padding:12px 8px;
+  }
+
   .toolbar .spacer{flex:1;}
   .field{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-dim);}
   .field input[type=text]{
@@ -148,12 +154,12 @@
 
   .reading-row{display:flex;gap:8px;margin-bottom:14px;align-items:stretch;}
   .reading-row .seg{flex:none;}
-  .reading-row input[type=number]{
+  .reading-row input[type=number], .reading-row input[type=text]{
     flex:1;background:var(--ink);border:1px solid var(--grid);color:var(--amber);
     font-family:'IBM Plex Mono';font-weight:600;font-size:20px;
     padding:10px 12px;border-radius:4px;min-width:0;
   }
-  .reading-row input[type=number]:focus{outline:none;border-color:var(--amber);}
+  .reading-row input[type=number]:focus, .reading-row input[type=text]:focus{outline:none;border-color:var(--amber);}
   .unit-hint{font-size:11.5px;color:var(--text-dim);margin:-8px 0 14px;}
 
   .feedback{
@@ -220,6 +226,11 @@
     <div class="panel">
       <h2 id="instTitle">Calibrador vernier</h2>
       <p class="meta" id="instMeta"></p>
+      <div class="seg scaleSeg" id="unitSeg">
+        <button data-unit="mm" class="active">Milímetros (mm)</button>
+        <button data-unit="in">Pulgadas — decimal</button>
+        <button data-unit="infrac">Pulgadas — fracción</button>
+      </div>
       <div id="svgHolder"></div>
       <label class="help-toggle"><input type="checkbox" id="helpToggle"> Mostrar ayuda de alineación (línea de referencia)</label>
       <div class="instructions" id="instructions"></div>
@@ -230,14 +241,10 @@
       <p class="progress" id="progressLine">Pieza 1 · modo práctica</p>
       <p class="progress" id="syncStatus" style="color:var(--text-dim);"></p>
       <div class="reading-row">
-        <div class="seg" id="unitSeg">
-          <button data-unit="mm" class="active">mm</button>
-          <button data-unit="in">in</button>
-        </div>
         <input type="number" step="0.01" id="readingInput" placeholder="0.00">
         <button class="btn primary" id="submitBtn">Verificar</button>
       </div>
-      <p class="unit-hint">Elige en qué unidad vas a responder (mm o in); ambas escalas del instrumento son válidas para leer.</p>
+      <p class="unit-hint" id="unitHint">Elige en qué unidad vas a responder (mm o in); ambas escalas del instrumento son válidas para leer.</p>
       <div class="feedback" id="feedback">Escribe tu lectura y presiona Verificar.</div>
       <div id="summaryHolder"></div>
       <h2 style="margin-top:16px;">Bitácora de sesión</h2>
@@ -296,14 +303,36 @@
 
   function gcd(a,b){ return b ? gcd(b, a % b) : a; }
 
-  function formatInches(value){
-    const total128 = Math.round(value*128);
-    const whole = Math.floor(total128/128);
-    const rem = total128 - whole*128;
+  function formatFraction(value, den){
+    const totalUnits = Math.round(value*den);
+    const whole = Math.floor(totalUnits/den);
+    const rem = totalUnits - whole*den;
     if(rem === 0) return `${whole} in`;
-    const g = gcd(rem, 128);
-    const num = rem/g, den = 128/g;
-    return whole > 0 ? `${whole} ${num}/${den} in` : `${num}/${den} in`;
+    const g = gcd(rem, den);
+    const num = rem/g, d = den/g;
+    return whole > 0 ? `${whole} ${num}/${d} in` : `${num}/${d} in`;
+  }
+
+  function formatInches(value){ return formatFraction(value, 128); }
+
+  function parseFractionToDecimal(raw){
+    const s = raw.trim();
+    if(s === "") return NaN;
+    const mixed = s.match(/^(-?\d+)\s+(\d+)\s*\/\s*(\d+)$/);
+    if(mixed){
+      const whole = parseInt(mixed[1],10), num = parseInt(mixed[2],10), den = parseInt(mixed[3],10);
+      if(den === 0) return NaN;
+      const sign = whole < 0 ? -1 : 1;
+      return whole + sign*(num/den);
+    }
+    const frac = s.match(/^(-?\d+)\s*\/\s*(\d+)$/);
+    if(frac){
+      const num = parseInt(frac[1],10), den = parseInt(frac[2],10);
+      if(den === 0) return NaN;
+      return num/den;
+    }
+    const dec = parseFloat(s.replace(",", "."));
+    return isNaN(dec) ? NaN : dec;
   }
 
   // ---------- definición de instrumentos ----------
@@ -317,14 +346,15 @@
       metaIN: "escala en pulgadas · resolución 1/128 in (0.0078 in) · rango 0–6 in",
       units: {
         mm: { resolution: 0.05, decimals: 2 },
-        in: { resolution: 1/128, decimals: 4 }
+        in: { resolution: 1/128, decimals: 4 },
+        infrac: { resolution: 1/128, decimals: 4, isFraction: true, fracDen: 128 }
       },
-      instructions: "Este calibrador tiene dos escalas grabadas sobre el mismo cuerpo, arriba en milímetros y abajo en pulgadas — ambas describen la misma posición de la mordaza. Escala métrica: cuenta los milímetros completos antes del cero del nonio; busca qué línea del nonio (0–20) coincide exactamente con una línea de la escala fija — ese número son las centésimas de milímetro (resolución 0.05 mm) que sumas. Escala en pulgadas: cuenta los dieciseisavos completos antes del cero del nonio inferior; el nonio de 8 divisiones indica múltiplos de 1/128\" a sumar. Elige con el selector mm/in en qué sistema vas a responder.",
+      instructions: "Este calibrador tiene dos escalas grabadas sobre el mismo cuerpo, arriba en milímetros y abajo en pulgadas — ambas describen la misma posición de la mordaza. Escala métrica: cuenta los milímetros completos antes del cero del nonio; busca qué línea del nonio (0–20) coincide exactamente con una línea de la escala fija — ese número son las centésimas de milímetro (resolución 0.05 mm) que sumas. Escala en pulgadas: cuenta los dieciseisavos completos antes del cero del nonio inferior; el nonio de 8 divisiones indica múltiplos de 1/128\" a sumar. Puedes responder en milímetros, en pulgadas decimales (ej. 0.0781 in) o en pulgadas como fracción (ej. 5/128) — elige con el selector.",
       genValueMM(){
         const steps = Math.floor(Math.random()*3001); // 0..150mm en pasos de 0.05mm
         return steps*0.05;
       },
-      render(valueMM, showHelp){ return renderVernierDual(valueMM, showHelp); }
+      render(valueMM, showHelp, unit){ return renderVernierSingle(valueMM, showHelp, unit); }
     },
     micrometro: {
       label: "Micrómetro (doble escala)",
@@ -332,11 +362,12 @@
       metaIN: "escala en pulgadas · resolución 0.001 in · rango 0–1 in",
       units: {
         mm: { resolution: 0.01, decimals: 2 },
-        in: { resolution: 0.001, decimals: 3 }
+        in: { resolution: 0.001, decimals: 3 },
+        infrac: { resolution: 0.001, decimals: 3, isFraction: true, fracDen: 1000 }
       },
-      instructions: "Se muestran dos micrómetros con la misma lectura física: uno graduado en mm y otro en pulgadas. Escala mm: lee en el manguito el último milímetro y, si está visible, la marca de 0.5 mm; en el tambor (50 divisiones) lee qué número coincide con la línea de referencia — son centésimas de mm. Escala pulgadas: lee en el manguito el último 0.1\" y, si está visible, la marca de 0.025\" siguiente; en el tambor (25 divisiones) lee las milésimas de pulgada. Suma ambas partes en el sistema que elijas para responder.",
+      instructions: "Se muestran dos micrómetros con la misma lectura física: uno graduado en mm y otro en pulgadas. Escala mm: lee en el manguito el último milímetro y, si está visible, la marca de 0.5 mm; en el tambor (50 divisiones) lee qué número coincide con la línea de referencia — son centésimas de mm. Escala pulgadas: lee en el manguito el último 0.1\" y, si está visible, la marca de 0.025\" siguiente; en el tambor (25 divisiones) lee las milésimas de pulgada. Puedes responder en milímetros, en pulgadas decimales (ej. 0.235 in) o en pulgadas como fracción de milésimas (ej. 235/1000) — elige con el selector.",
       genValueMM(){ const v = Math.random()*25; return Math.round(v*100)/100; },
-      render(valueMM, showHelp){ return renderMicrometerDual(valueMM, showHelp); }
+      render(valueMM, showHelp, unit){ return renderMicrometerSingle(valueMM, showHelp, unit); }
     },
     comparador: {
       label: "Comparador de carátula (doble escala)",
@@ -344,11 +375,12 @@
       metaIN: "escala en pulgadas · resolución 0.001 in/vuelta · rango 0–0.5 in (≈12.7 mm)",
       units: {
         mm: { resolution: 0.01, decimals: 2 },
-        in: { resolution: 0.001, decimals: 3 }
+        in: { resolution: 0.001, decimals: 3 },
+        infrac: { resolution: 0.001, decimals: 3, isFraction: true, fracDen: 1000 }
       },
-      instructions: "Se muestran dos comparadores de carátula con la misma lectura física. Escala mm: el dial pequeño indica los milímetros enteros (vueltas completas) y el dial grande las centésimas de mm. Escala pulgadas: el dial pequeño indica las décimas de pulgada (una vuelta completa del dial grande equivale a 0.1\") y el dial grande las milésimas de pulgada. Suma ambas partes en el sistema que elijas para responder.",
+      instructions: "Se muestran dos comparadores de carátula con la misma lectura física. Escala mm: el dial pequeño indica los milímetros enteros (vueltas completas) y el dial grande las centésimas de mm. Escala pulgadas: el dial pequeño indica las décimas de pulgada (una vuelta completa del dial grande equivale a 0.1\") y el dial grande las milésimas de pulgada. Puedes responder en milímetros, en pulgadas decimales (ej. 0.235 in) o en pulgadas como fracción de milésimas (ej. 235/1000) — elige con el selector.",
       genValueMM(){ const v = Math.random()*10; return Math.round(v*100)/100; },
-      render(valueMM, showHelp){ return renderComparadorDual(valueMM, showHelp); }
+      render(valueMM, showHelp, unit){ return renderComparadorSingle(valueMM, showHelp, unit); }
     }
   };
 
@@ -366,23 +398,58 @@
 
   // ---------- SVG: calibrador vernier (doble escala, un solo cuerpo) ----------
 
-  function renderVernierDual(valueMM, showHelp){
-    const pxPerMM = 5, marginL = 34;
-    const rangeMM = 150, rangeIN = 6;
-    const pxPerIN = pxPerMM*MM_PER_IN;
-    const width = marginL*2 + Math.max(rangeMM*pxPerMM, rangeIN*pxPerIN);
-    const height = 210;
-    const yMM = 40, yIN = 138;
-    const valueIN = valueMM/MM_PER_IN;
+  function renderVernierSingle(valueMM, showHelp, unit){
+    const marginL = 34, y = 64, height = 158;
+    if(unit !== "mm"){
+      const pxPerIN = 130, rangeIN = 6;
+      const width = marginL*2 + rangeIN*pxPerIN;
+      const valueIN = valueMM/MM_PER_IN;
 
-    // escala fija métrica
+      let inTicks = "", inLabels = "";
+      const totalSixteenths = rangeIN*16;
+      const pxPerSixteenth = pxPerIN/16;
+      for(let s=0;s<=totalSixteenths;s++){
+        const x = marginL + s*pxPerSixteenth;
+        const isWhole = s%16===0, isHalf = s%8===0, isQuarter = s%4===0, isEighth = s%2===0;
+        const h = isWhole?30:(isHalf?22:(isQuarter?17:(isEighth?13:9)));
+        inTicks += `<line x1="${x}" y1="${y}" x2="${x}" y2="${y+h}" stroke="#dbe4ea" stroke-width="${isWhole?1.6:1}"/>`;
+        if(isWhole) inLabels += `<text x="${x}" y="${y-10}" font-family="IBM Plex Mono" font-size="13" fill="#8ea0b3" text-anchor="middle">${s/16}"</text>`;
+      }
+      const RES_IN = 1/128, N_IN = 8;
+      const zeroXin = marginL + valueIN*pxPerIN;
+      const stepsIN = Math.round(valueIN/RES_IN);
+      const n0in = ((stepsIN % N_IN) + N_IN) % N_IN;
+      const vernStepPxIN = (7/128)*pxPerIN;
+      let vernTicksIN = "", vernLabelsIN = "";
+      for(let i=0;i<=8;i++){
+        const x = zeroXin + i*vernStepPxIN;
+        const isMark = i%4===0;
+        const collidesWithCurrent = i!==n0in && Math.abs(i-n0in)<=1;
+        vernTicksIN += `<line x1="${x}" y1="${y+58}" x2="${x}" y2="${y+58-(isMark?24:15)}" stroke="#f2a900" stroke-width="${i===n0in?2.6:1.3}"/>`;
+        if((isMark && !collidesWithCurrent) || i===n0in) vernLabelsIN += `<text x="${x}" y="${y+78}" font-family="IBM Plex Mono" font-size="11" fill="${i===n0in?'#f2a900':'#8ea0b3'}" font-weight="${i===n0in?'700':'400'}" text-anchor="middle">${i}</text>`;
+      }
+      const helpIN = showHelp ? `<line x1="${zeroXin+n0in*vernStepPxIN}" y1="${y-34}" x2="${zeroXin+n0in*vernStepPxIN}" y2="${y+88}" stroke="#5fb488" stroke-width="1" stroke-dasharray="3,3"/>` : "";
+      const pieceW = valueIN*pxPerIN;
+
+      return `<svg class="instrument-svg" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+        <rect x="${marginL-4}" y="${y-44}" width="${pieceW+4}" height="30" fill="#3a4a58" opacity=".5" stroke="#33465a"/>
+        <text x="${marginL+pieceW/2}" y="${y-50}" font-family="IBM Plex Sans" font-size="11" fill="#8ea0b3" text-anchor="middle">pieza</text>
+        <text x="${marginL}" y="${y-30}" font-family="IBM Plex Sans" font-size="12.5" fill="#f2a900">escala en pulgadas (in)</text>
+        <line x1="${marginL}" y1="${y}" x2="${marginL+rangeIN*pxPerIN}" y2="${y}" stroke="#dbe4ea" stroke-width="1.6"/>
+        ${inTicks}${inLabels}
+        ${vernTicksIN}${vernLabelsIN}${helpIN}
+      </svg>`;
+    }
+
+    const pxPerMM = 7, rangeMM = 150;
+    const width = marginL*2 + rangeMM*pxPerMM;
     let mmTicks = "", mmLabels = "";
     for(let mm=0; mm<=rangeMM; mm++){
       const x = marginL + mm*pxPerMM;
       const isMajor = mm%10===0, isMid = mm%5===0;
-      const h = isMajor?20:(isMid?14:9);
-      mmTicks += `<line x1="${x}" y1="${yMM}" x2="${x}" y2="${yMM+h}" stroke="#dbe4ea" stroke-width="${isMajor?1.4:1}"/>`;
-      if(isMajor) mmLabels += `<text x="${x}" y="${yMM-6}" font-family="IBM Plex Mono" font-size="9.5" fill="#8ea0b3" text-anchor="middle">${mm}</text>`;
+      const h = isMajor?30:(isMid?22:13);
+      mmTicks += `<line x1="${x}" y1="${y}" x2="${x}" y2="${y+h}" stroke="#dbe4ea" stroke-width="${isMajor?1.6:1}"/>`;
+      if(isMajor) mmLabels += `<text x="${x}" y="${y-10}" font-family="IBM Plex Mono" font-size="13" fill="#8ea0b3" text-anchor="middle">${mm}</text>`;
     }
     const RES_MM = 0.05, N_MM = 20; // 1mm / 20 = 0.05mm de resolución
     const zeroXmm = marginL + valueMM*pxPerMM;
@@ -393,54 +460,20 @@
     for(let i=0;i<=N_MM;i++){
       const x = zeroXmm + i*vernStepPxMM;
       const isMark = i%5===0;
-      vernTicksMM += `<line x1="${x}" y1="${yMM+40}" x2="${x}" y2="${yMM+40-(isMark?16:10)}" stroke="#f2a900" stroke-width="${i===n0mm?2.2:1.1}"/>`;
-      if(isMark || i===n0mm) vernLabelsMM += `<text x="${x}" y="${yMM+55}" font-family="IBM Plex Mono" font-size="8" fill="${i===n0mm?'#f2a900':'#8ea0b3'}" text-anchor="middle">${i}</text>`;
+      const collidesWithCurrent = i!==n0mm && Math.abs(i-n0mm)<=1;
+      vernTicksMM += `<line x1="${x}" y1="${y+58}" x2="${x}" y2="${y+58-(isMark?24:15)}" stroke="#f2a900" stroke-width="${i===n0mm?2.6:1.3}"/>`;
+      if((isMark && !collidesWithCurrent) || i===n0mm) vernLabelsMM += `<text x="${x}" y="${y+78}" font-family="IBM Plex Mono" font-size="11" fill="${i===n0mm?'#f2a900':'#8ea0b3'}" font-weight="${i===n0mm?'700':'400'}" text-anchor="middle">${i}</text>`;
     }
-    const helpMM = showHelp ? `<line x1="${zeroXmm+n0mm*vernStepPxMM}" y1="${yMM-24}" x2="${zeroXmm+n0mm*vernStepPxMM}" y2="${yMM+62}" stroke="#5fb488" stroke-width="1" stroke-dasharray="3,3"/>` : "";
-
-    // escala fija en pulgadas (dieciseisavos)
-    let inTicks = "", inLabels = "";
-    const totalSixteenths = rangeIN*16;
-    const pxPerSixteenth = pxPerIN/16;
-    for(let s=0;s<=totalSixteenths;s++){
-      const x = marginL + s*pxPerSixteenth;
-      const isWhole = s%16===0, isHalf = s%8===0, isQuarter = s%4===0, isEighth = s%2===0;
-      const h = isWhole?20:(isHalf?15:(isQuarter?12:(isEighth?9:6)));
-      inTicks += `<line x1="${x}" y1="${yIN}" x2="${x}" y2="${yIN+h}" stroke="#dbe4ea" stroke-width="${isWhole?1.4:1}"/>`;
-      if(isWhole) inLabels += `<text x="${x}" y="${yIN-6}" font-family="IBM Plex Mono" font-size="9.5" fill="#8ea0b3" text-anchor="middle">${s/16}"</text>`;
-    }
-    const RES_IN = 1/128, N_IN = 8;
-    const zeroXin = marginL + valueIN*pxPerIN;
-    const stepsIN = Math.round(valueIN/RES_IN);
-    const n0in = ((stepsIN % N_IN) + N_IN) % N_IN;
-    const vernStepPxIN = (7/128)*pxPerIN;
-    let vernTicksIN = "", vernLabelsIN = "";
-    for(let i=0;i<=8;i++){
-      const x = zeroXin + i*vernStepPxIN;
-      const isMark = i%4===0;
-      vernTicksIN += `<line x1="${x}" y1="${yIN+40}" x2="${x}" y2="${yIN+40-(isMark?16:10)}" stroke="#f2a900" stroke-width="${i===n0in?2.2:1.1}"/>`;
-      if(isMark || i===n0in) vernLabelsIN += `<text x="${x}" y="${yIN+55}" font-family="IBM Plex Mono" font-size="8" fill="${i===n0in?'#f2a900':'#8ea0b3'}" text-anchor="middle">${i}</text>`;
-    }
-    const helpIN = showHelp ? `<line x1="${zeroXin+n0in*vernStepPxIN}" y1="${yIN-24}" x2="${zeroXin+n0in*vernStepPxIN}" y2="${yIN+62}" stroke="#5fb488" stroke-width="1" stroke-dasharray="3,3"/>` : "";
-
+    const helpMM = showHelp ? `<line x1="${zeroXmm+n0mm*vernStepPxMM}" y1="${y-34}" x2="${zeroXmm+n0mm*vernStepPxMM}" y2="${y+88}" stroke="#5fb488" stroke-width="1" stroke-dasharray="3,3"/>` : "";
     const pieceW = valueMM*pxPerMM;
-    // guía vertical que conecta ambas escalas: es la misma posición física en ambos sistemas
-    const guide = `<line x1="${zeroXmm}" y1="${yMM+2}" x2="${zeroXmm}" y2="${yIN-22}" stroke="#f2a900" stroke-width="1" opacity=".25" stroke-dasharray="2,3"/>`;
 
     return `<svg class="instrument-svg" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
-      <rect x="${marginL-4}" y="${yMM-30}" width="${pieceW+4}" height="${(yIN+40)-(yMM-30)}" fill="#3a4a58" opacity=".5" stroke="#33465a"/>
-      <text x="${marginL+pieceW/2}" y="${yMM-36}" font-family="IBM Plex Sans" font-size="10" fill="#8ea0b3" text-anchor="middle">pieza</text>
-      ${guide}
-
-      <text x="${marginL}" y="${yMM-18}" font-family="IBM Plex Sans" font-size="10.5" fill="#f2a900">escala métrica (mm)</text>
-      <line x1="${marginL}" y1="${yMM}" x2="${marginL+rangeMM*pxPerMM}" y2="${yMM}" stroke="#dbe4ea" stroke-width="1.4"/>
+      <rect x="${marginL-4}" y="${y-44}" width="${pieceW+4}" height="30" fill="#3a4a58" opacity=".5" stroke="#33465a"/>
+      <text x="${marginL+pieceW/2}" y="${y-50}" font-family="IBM Plex Sans" font-size="11" fill="#8ea0b3" text-anchor="middle">pieza</text>
+      <text x="${marginL}" y="${y-30}" font-family="IBM Plex Sans" font-size="12.5" fill="#f2a900">escala métrica (mm)</text>
+      <line x1="${marginL}" y1="${y}" x2="${marginL+rangeMM*pxPerMM}" y2="${y}" stroke="#dbe4ea" stroke-width="1.6"/>
       ${mmTicks}${mmLabels}
       ${vernTicksMM}${vernLabelsMM}${helpMM}
-
-      <text x="${marginL}" y="${yIN-18}" font-family="IBM Plex Sans" font-size="10.5" fill="#f2a900">escala en pulgadas (in)</text>
-      <line x1="${marginL}" y1="${yIN}" x2="${marginL+rangeIN*pxPerIN}" y2="${yIN}" stroke="#dbe4ea" stroke-width="1.4"/>
-      ${inTicks}${inLabels}
-      ${vernTicksIN}${vernLabelsIN}${helpIN}
     </svg>`;
   }
 
@@ -449,7 +482,7 @@
   function micrometerFace(value, o){
     const marginL = 28, marginT = 28;
     const width = marginL*2 + o.rangeMax*o.pxPerUnit + 230;
-    const height = 195;
+    const height = 210;
     const sleeveSteps = Math.floor(value*o.stepsPerUnit + 1e-9);
     let sleeveReading = sleeveSteps/o.stepsPerUnit;
     let thimbleReading = Math.round((value - sleeveReading)*o.thimbleMultiplier);
@@ -499,28 +532,26 @@
     </svg>`;
   }
 
-  function renderMicrometerDual(valueMM, showHelp){
-    const valueIN = valueMM/MM_PER_IN;
-    const svgMM = micrometerFace(valueMM, {
+  function renderMicrometerSingle(valueMM, showHelp, unit){
+    if(unit !== "mm"){
+      const valueIN = valueMM/MM_PER_IN;
+      return micrometerFace(valueIN, {
+        rangeMax: 1, pxPerUnit: 380, stepsPerUnit: 40, majorEveryK: 4,
+        thimbleDivisions: 25, thimbleMultiplier: 1000,
+        unitLabel: "in", majorLabel: u => u.toFixed(1), showHelp
+      });
+    }
+    return micrometerFace(valueMM, {
       rangeMax: 25, pxPerUnit: 20, stepsPerUnit: 2, majorEveryK: 10,
       thimbleDivisions: 50, thimbleMultiplier: 100,
       unitLabel: "mm", majorLabel: u => Math.round(u), showHelp
     });
-    const svgIN = micrometerFace(valueIN, {
-      rangeMax: 1, pxPerUnit: 380, stepsPerUnit: 40, majorEveryK: 4,
-      thimbleDivisions: 25, thimbleMultiplier: 1000,
-      unitLabel: "in", majorLabel: u => u.toFixed(1), showHelp
-    });
-    return `<div class="dualWrap">
-      <div class="faceCol"><p class="faceLabel">Escala métrica (mm)</p>${svgMM}</div>
-      <div class="faceCol"><p class="faceLabel">Escala en pulgadas (in)</p>${svgIN}</div>
-    </div>`;
   }
 
   // ---------- SVG: comparador de carátula (una cara por unidad) ----------
 
   function comparadorFace(value, o){
-    const width = 320, height = 225;
+    const width = 320, height = 242;
     const cx = width/2, cy = 112, r = o.r;
     const mainPos = ((Math.round(value/o.resolutionPerDiv) % o.mainDivisions) + o.mainDivisions) % o.mainDivisions;
     const revolution = Math.floor(value/o.unitPerRev + 1e-9);
@@ -564,20 +595,18 @@
     </svg>`;
   }
 
-  function renderComparadorDual(valueMM, showHelp){
-    const valueIN = valueMM/MM_PER_IN;
-    const svgMM = comparadorFace(valueMM, {
+  function renderComparadorSingle(valueMM, showHelp, unit){
+    if(unit !== "mm"){
+      const valueIN = valueMM/MM_PER_IN;
+      return comparadorFace(valueIN, {
+        resolutionPerDiv: 0.001, mainDivisions: 100, unitPerRev: 0.1, subCount: 10, r: 82,
+        mainDialLabel: "dial principal · milésimas (in)", subDialLabel: "dial pequeño = décimas de in (vueltas)", showHelp
+      });
+    }
+    return comparadorFace(valueMM, {
       resolutionPerDiv: 0.01, mainDivisions: 100, unitPerRev: 1, subCount: 10, r: 82,
       mainDialLabel: "dial principal · centésimas (mm)", subDialLabel: "dial pequeño = mm enteros (vueltas)", showHelp
     });
-    const svgIN = comparadorFace(valueIN, {
-      resolutionPerDiv: 0.001, mainDivisions: 100, unitPerRev: 0.1, subCount: 10, r: 82,
-      mainDialLabel: "dial principal · milésimas (in)", subDialLabel: "dial pequeño = décimas de in (vueltas)", showHelp
-    });
-    return `<div class="dualWrap">
-      <div class="faceCol"><p class="faceLabel">Escala métrica (mm)</p>${svgMM}</div>
-      <div class="faceCol"><p class="faceLabel">Escala en pulgadas (in)</p>${svgIN}</div>
-    </div>`;
   }
 
   // ---------- app logic ----------
@@ -594,13 +623,41 @@
     });
   }
 
+  const UNIT_NAMES = {
+    mm: "milímetros (mm)",
+    in: "pulgadas en decimal (in)",
+    infrac: "pulgadas en fracción (in)"
+  };
+
   function updateUnitUI(){
     const inst = INSTRUMENTS[state.instrument];
     document.querySelectorAll("#unitSeg button").forEach(b=>b.classList.toggle("active", b.dataset.unit===state.answerUnit));
     const uConf = inst.units[state.answerUnit];
     const input = document.getElementById("readingInput");
-    input.step = uConf.resolution;
-    input.placeholder = (0).toFixed(uConf.decimals);
+    if(uConf.isFraction){
+      input.type = "text";
+      input.removeAttribute("step");
+      input.placeholder = `ej. 5/${uConf.fracDen}`;
+    } else {
+      input.type = "number";
+      input.step = uConf.resolution;
+      input.placeholder = (0).toFixed(uConf.decimals);
+    }
+    const hint = document.getElementById("unitHint");
+    const unitName = UNIT_NAMES[state.answerUnit] || state.answerUnit;
+    if(state.evalActive){
+      hint.innerHTML = `Esta pieza pide tu lectura en <strong>${unitName}</strong> — la unidad se asigna al azar en cada pieza durante la evaluación.`;
+    } else if(uConf.isFraction){
+      hint.innerHTML = `Escribe tu lectura como fracción, por ejemplo <strong>5/${uConf.fracDen}</strong> o <strong>1 3/${uConf.fracDen}</strong> (número mixto).`;
+    } else {
+      hint.textContent = "Elige en qué unidad vas a responder; las tres representan la misma escala física, solo cambia el formato de tu respuesta.";
+    }
+  }
+
+  function randomizeAnswerUnit(){
+    const inst = INSTRUMENTS[state.instrument];
+    const units = Object.keys(inst.units);
+    state.answerUnit = units[Math.floor(Math.random()*units.length)];
   }
 
   function setUnitSegDisabled(disabled){
@@ -626,7 +683,7 @@
   function renderSVG(){
     const inst = INSTRUMENTS[state.instrument];
     const showHelp = document.getElementById("helpToggle").checked && state.mode==="practica";
-    document.getElementById("svgHolder").innerHTML = inst.render(state.currentValueMM, showHelp);
+    document.getElementById("svgHolder").innerHTML = inst.render(state.currentValueMM, showHelp, state.answerUnit);
   }
 
   function updateProgressLine(){
@@ -648,22 +705,29 @@
     const uConf = inst.units[unit];
     const raw = document.getElementById("readingInput").value;
     if(raw === "") return;
-    const entered = parseFloat(raw);
+    const entered = uConf.isFraction ? parseFractionToDecimal(raw) : parseFloat(raw);
+    if(isNaN(entered)){
+      const fb = document.getElementById("feedback");
+      fb.className = "feedback bad";
+      fb.innerHTML = `<span class="big">Formato no válido</span>Escribe una fracción como 5/${uConf.fracDen} o un número mixto como 1 3/${uConf.fracDen}.`;
+      return;
+    }
     const correct = correctValueInUnit(unit);
     const error = Math.round(Math.abs(entered-correct)*100000)/100000;
-    const record = { inst: state.instrument, mode: state.mode, unit, value: correct, entered, error, ts: new Date().toISOString() };
+    const enteredDisplay = uConf.isFraction ? raw.trim() : entered.toFixed(uConf.decimals) + " " + unit;
+    const record = { inst: state.instrument, mode: state.mode, unit, value: correct, entered, enteredDisplay, error, ts: new Date().toISOString() };
     state.history.push(record);
     sendToSheet(record);
 
     const fb = document.getElementById("feedback");
-    const correctLabel = (state.instrument === "vernier" && unit === "in")
-      ? `${formatInches(correct)} (${correct.toFixed(4)} in)`
+    const correctLabel = uConf.isFraction
+      ? `${formatFraction(correct, uConf.fracDen)} (${correct.toFixed(4)} in)`
       : `${correct.toFixed(uConf.decimals)} ${unit}`;
     if(state.mode === "practica"){
       const okness = error <= uConf.resolution + 1e-6;
       fb.className = "feedback " + (okness?"good":"bad");
       fb.innerHTML = `<span class="big">${okness? "Correcto" : "Fuera de tolerancia"}</span>
-        Valor real: ${correctLabel} · Tu lectura: ${entered.toFixed(uConf.decimals)} ${unit} · Error: ${error.toFixed(uConf.decimals)} ${unit}`;
+        Valor real: ${correctLabel} · Tu lectura: ${enteredDisplay} · Error: ${error.toFixed(uConf.decimals)} ${unit==="mm"?"mm":"in"}`;
       renderHistory();
       updateProgressLine();
     } else {
@@ -682,6 +746,8 @@
   function newPieceKeepMode(){
     const inst = INSTRUMENTS[state.instrument];
     state.currentValueMM = inst.genValueMM();
+    randomizeAnswerUnit();
+    updateUnitUI();
     renderSVG();
     updateProgressLine();
   }
@@ -693,18 +759,22 @@
     document.getElementById("readingInput").disabled = true;
     setUnitSegDisabled(true);
     const recs = state.history.filter(h=>h.mode==="evaluacion" && h.inst===state.instrument).slice(-state.evalTarget);
-    const errs = recs.map(r=>r.error);
-    const mean = errs.reduce((a,b)=>a+b,0)/errs.length;
-    const max = Math.max(...errs);
     const withinTol = recs.filter(r=> r.error <= inst.units[r.unit].resolution + 1e-6).length;
-    const unitUsed = recs.length && recs.every(r=>r.unit===recs[0].unit) ? recs[0].unit : "mixto";
+    const meanOf = list => list.length ? list.reduce((a,r)=>a+r.error,0)/list.length : null;
+    const breakdownLines = Object.keys(inst.units).map(u=>{
+      const list = recs.filter(r=>r.unit===u);
+      if(!list.length) return "";
+      const mean = meanOf(list);
+      const unitDisplay = u==="mm" ? "mm" : "in";
+      return `error medio en ${UNIT_NAMES[u] || u}: ${mean.toFixed(4)} ${unitDisplay} (${list.length} lecturas)<br>`;
+    }).join("");
     document.getElementById("feedback").className = "feedback good";
-    document.getElementById("feedback").innerHTML = `<span class="big">Evaluación completa</span>Se registraron ${recs.length} lecturas.`;
+    document.getElementById("feedback").innerHTML = `<span class="big">Evaluación completa</span>Se registraron ${recs.length} lecturas (unidad asignada al azar en cada pieza).`;
     document.getElementById("summaryHolder").innerHTML = `
       <div class="summary">
-        <div class="big">${mean.toFixed(4)} ${unitUsed !== "mixto" ? unitUsed : ""}</div>
-        error medio absoluto de lectura${unitUsed !== "mixto" ? "" : " (unidades mixtas — evita cambiar de unidad a mitad de una evaluación)"}<br>
-        error máximo: ${max.toFixed(4)} · lecturas dentro de tolerancia: ${withinTol}/${recs.length}
+        <div class="big">${withinTol}/${recs.length}</div>
+        lecturas dentro de tolerancia<br>
+        ${breakdownLines}
       </div>`;
     renderHistory();
   }
@@ -716,7 +786,9 @@
     body.innerHTML = rows.map((r,idx)=>{
       const uConf = inst.units[r.unit];
       const okness = r.error <= uConf.resolution + 1e-6;
-      return `<tr><td>${rows.length-idx}</td><td>${r.entered.toFixed(uConf.decimals)} ${r.unit}</td><td>${r.value.toFixed(uConf.decimals)} ${r.unit}</td><td class="err-cell ${okness?'good':'bad'}">${r.error.toFixed(uConf.decimals)}</td></tr>`;
+      const entered = r.enteredDisplay || `${r.entered.toFixed(uConf.decimals)} ${r.unit}`;
+      const correct = uConf.isFraction ? `${formatFraction(r.value, uConf.fracDen)}` : `${r.value.toFixed(uConf.decimals)} ${r.unit}`;
+      return `<tr><td>${rows.length-idx}</td><td>${entered}</td><td>${correct}</td><td class="err-cell ${okness?'good':'bad'}">${r.error.toFixed(uConf.decimals)}</td></tr>`;
     }).join("");
   }
 
@@ -753,10 +825,11 @@
   function downloadCSV(){
     if(state.history.length===0){ alert("Todavía no hay lecturas registradas."); return; }
     const name = document.getElementById("studentName").value.trim() || "anonimo";
-    let csv = "estudiante,instrumento,modo,unidad,valor_correcto,lectura_estudiante,error,valor_correcto_mm,timestamp\n";
+    let csv = "estudiante,instrumento,modo,unidad,valor_correcto,lectura_estudiante,lectura_texto,error,valor_correcto_mm,timestamp\n";
     state.history.forEach(r=>{
       const mmVal = r.unit==="mm" ? r.value : r.value*MM_PER_IN;
-      csv += `${name},${r.inst},${r.mode},${r.unit},${r.value.toFixed(4)},${r.entered.toFixed(4)},${r.error.toFixed(4)},${mmVal.toFixed(4)},${r.ts}\n`;
+      const texto = (r.enteredDisplay || "").replace(/,/g, ";");
+      csv += `${name},${r.inst},${r.mode},${r.unit},${r.value.toFixed(4)},${r.entered.toFixed(4)},${texto},${r.error.toFixed(4)},${mmVal.toFixed(4)},${r.ts}\n`;
     });
     const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
     const url = URL.createObjectURL(blob);
@@ -794,6 +867,7 @@
     state.answerUnit = btn.dataset.unit;
     state.unitByInst[state.instrument] = state.answerUnit;
     updateUnitUI();
+    renderSVG();
   });
   document.getElementById("newPieceBtn").addEventListener("click", newPiece);
   document.getElementById("submitBtn").addEventListener("click", submitReading);
