@@ -287,7 +287,7 @@
         modo: record.mode,
         unidad: record.unit,
         valor_correcto: record.value,
-        lectura_estudiante: record.entered,
+        lectura_estudiante: record.enteredExact != null ? record.enteredExact : record.entered,
         lectura_texto: record.enteredDisplay || "",
         error: record.error,
         valor_correcto_mm: mmVal,
@@ -699,7 +699,17 @@
   }
 
   function correctValueInUnit(unit){
-    return unit==="mm" ? state.currentValueMM : state.currentValueMM/MM_PER_IN;
+    const raw = unit==="mm" ? state.currentValueMM : state.currentValueMM/MM_PER_IN;
+    const inst = INSTRUMENTS[state.instrument];
+    const uConf = inst.units[unit];
+    // Se redondea a la resolución propia de esa escala/unidad: es lo máximo que
+    // un instrumento real permite leer, y evita un "error" residual falso cuando
+    // el alumno responde exactamente la fracción/número que marca la escala.
+    if(uConf && uConf.resolution){
+      const res = uConf.resolution;
+      return Math.round(raw/res)*res;
+    }
+    return raw;
   }
 
   function submitReading(){
@@ -718,8 +728,9 @@
     const correct = correctValueInUnit(unit);
     const error = Math.round(Math.abs(entered-correct)*100000)/100000;
     const enteredDisplay = uConf.isFraction ? raw.trim() : entered.toFixed(uConf.decimals) + " " + unit;
+    const enteredExact = uConf.isFraction ? raw.trim() : entered.toFixed(uConf.decimals);
     const unitDisplay = UNIT_NAMES[unit] || unit;
-    const record = { inst: state.instrument, mode: state.mode, unit, unitDisplay, value: correct, entered, enteredDisplay, error, ts: new Date().toISOString() };
+    const record = { inst: state.instrument, mode: state.mode, unit, unitDisplay, value: correct, entered, enteredDisplay, enteredExact, error, ts: new Date().toISOString() };
     state.history.push(record);
     sendToSheet(record);
 
@@ -833,7 +844,8 @@
     state.history.forEach(r=>{
       const mmVal = r.unit==="mm" ? r.value : r.value*MM_PER_IN;
       const texto = (r.enteredDisplay || "").replace(/,/g, ";");
-      csv += `${name},${r.inst},${r.mode},${r.unit},${r.value.toFixed(4)},${r.entered.toFixed(4)},${texto},${r.error.toFixed(4)},${mmVal.toFixed(4)},${r.ts}\n`;
+      const exacto = (r.enteredExact != null ? r.enteredExact : r.entered.toFixed(4)).toString().replace(/,/g, ";");
+      csv += `${name},${r.inst},${r.mode},${r.unit},${r.value.toFixed(4)},${exacto},${texto},${r.error.toFixed(4)},${mmVal.toFixed(4)},${r.ts}\n`;
     });
     const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
     const url = URL.createObjectURL(blob);
