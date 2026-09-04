@@ -215,6 +215,19 @@
         <option value="5">5</option>
         <option value="10" selected>10</option>
         <option value="15">15</option>
+        <option value="20">20</option>
+        <option value="30">30</option>
+      </select>
+    </div>
+    <div class="field" id="timeField">Tiempo límite
+      <select id="sessionTime">
+        <option value="0" selected>Sin límite</option>
+        <option value="3">3 min</option>
+        <option value="5">5 min</option>
+        <option value="10">10 min</option>
+        <option value="15">15 min</option>
+        <option value="20">20 min</option>
+        <option value="30">30 min</option>
       </select>
     </div>
     <button class="btn" id="newPieceBtn">Nueva pieza</button>
@@ -396,7 +409,9 @@
     history: [],          // {inst, mode, unit, value, entered, error, ts}
     evalTarget: 10,
     evalCount: 0,
-    evalActive: false
+    evalActive: false,
+    evalDeadline: null,   // timestamp (ms) en que se cierra la evaluación por tiempo, o null si no hay límite
+    evalTimerId: null
   };
 
   // ---------- SVG: calibrador vernier (doble escala, un solo cuerpo) ----------
@@ -689,13 +704,32 @@
     document.getElementById("svgHolder").innerHTML = inst.render(state.currentValueMM, showHelp, state.answerUnit);
   }
 
+  function formatMMSS(ms){
+    const totalSec = Math.max(0, Math.ceil(ms/1000));
+    const mm = Math.floor(totalSec/60);
+    const ss = totalSec%60;
+    return `${mm}:${ss<10?"0":""}${ss}`;
+  }
+
   function updateProgressLine(){
     const line = document.getElementById("progressLine");
     if(state.mode==="practica"){
       line.textContent = `Modo práctica · pieza libre · ${state.history.filter(h=>h.mode==='practica' && h.inst===state.instrument).length} lecturas registradas`;
     } else {
-      line.textContent = `Modo evaluación · pieza ${state.evalCount} de ${state.evalTarget}`;
+      let txt = `Modo evaluación · pieza ${state.evalCount} de ${state.evalTarget}`;
+      if(state.evalActive && state.evalDeadline){
+        txt += ` · tiempo restante ${formatMMSS(state.evalDeadline - Date.now())}`;
+      }
+      line.textContent = txt;
     }
+  }
+
+  function stopEvalTimer(){
+    if(state.evalTimerId){
+      clearInterval(state.evalTimerId);
+      state.evalTimerId = null;
+    }
+    state.evalDeadline = null;
   }
 
   function correctValueInUnit(unit){
@@ -767,9 +801,10 @@
     updateProgressLine();
   }
 
-  function finishEvaluation(){
+  function finishEvaluation(closedByTime){
     const inst = INSTRUMENTS[state.instrument];
     state.evalActive = false;
+    stopEvalTimer();
     document.getElementById("submitBtn").disabled = true;
     document.getElementById("readingInput").disabled = true;
     setUnitSegDisabled(true);
@@ -784,7 +819,10 @@
       return `error medio en ${UNIT_NAMES[u] || u}: ${mean.toFixed(4)} ${unitDisplay} (${list.length} lecturas)<br>`;
     }).join("");
     document.getElementById("feedback").className = "feedback good";
-    document.getElementById("feedback").innerHTML = `<span class="big">Evaluación completa</span>Se registraron ${recs.length} lecturas (unidad asignada al azar en cada pieza).`;
+    const closeReason = closedByTime
+      ? `Se acabó el tiempo — evaluación cerrada automáticamente.`
+      : `Evaluación completa`;
+    document.getElementById("feedback").innerHTML = `<span class="big">${closeReason}</span>Se registraron ${recs.length} lecturas (unidad asignada al azar en cada pieza).`;
     document.getElementById("summaryHolder").innerHTML = `
       <div class="summary">
         <div class="big">${withinTol}/${recs.length}</div>
@@ -792,6 +830,7 @@
         ${breakdownLines}
       </div>`;
     renderHistory();
+    updateProgressLine();
   }
 
   function renderHistory(){
@@ -815,6 +854,20 @@
     document.getElementById("readingInput").disabled = false;
     document.getElementById("summaryHolder").innerHTML = "";
     setUnitSegDisabled(true);
+    stopEvalTimer();
+    const minutes = parseInt(document.getElementById("sessionTime").value, 10) || 0;
+    if(minutes > 0){
+      state.evalDeadline = Date.now() + minutes*60*1000;
+      state.evalTimerId = setInterval(()=>{
+        if(!state.evalActive){ stopEvalTimer(); return; }
+        if(Date.now() >= state.evalDeadline){
+          stopEvalTimer();
+          finishEvaluation(true);
+          return;
+        }
+        updateProgressLine();
+      }, 1000);
+    }
     newPieceKeepMode();
     updateProgressLine();
   }
@@ -823,6 +876,7 @@
     state.mode = mode;
     document.querySelectorAll("#modeSeg button").forEach(b=>b.classList.toggle("active", b.dataset.mode===mode));
     document.getElementById("lenField").style.display = mode==="evaluacion" ? "flex" : "none";
+    document.getElementById("timeField").style.display = mode==="evaluacion" ? "flex" : "none";
     document.getElementById("newPieceBtn").style.display = mode==="practica" ? "inline-block" : "none";
     document.getElementById("summaryHolder").innerHTML = "";
     document.getElementById("submitBtn").textContent = mode==="practica" ? "Verificar" : "Registrar";
@@ -830,6 +884,7 @@
       startEvaluation();
     } else {
       state.evalActive = false;
+      stopEvalTimer();
       document.getElementById("submitBtn").disabled = false;
       document.getElementById("readingInput").disabled = false;
       setUnitSegDisabled(false);
@@ -862,6 +917,7 @@
     state.history = state.history.filter(h=>false); // clear all
     state.evalActive = false;
     state.evalCount = 0;
+    stopEvalTimer();
     document.getElementById("submitBtn").disabled = false;
     document.getElementById("readingInput").disabled = false;
     document.getElementById("summaryHolder").innerHTML = "";
@@ -892,9 +948,21 @@
   document.getElementById("downloadBtn").addEventListener("click", downloadCSV);
   document.getElementById("resetBtn").addEventListener("click", resetSession);
 
+  // Recuerda el nombre del estudiante en este dispositivo/navegador, para que
+  // no tenga que volver a escribirlo cada vez que abra el enlace.
+  const STUDENT_NAME_KEY = "metrologia_sim_estudiante";
+  document.getElementById("studentName").addEventListener("input", (e)=>{
+    try{ localStorage.setItem(STUDENT_NAME_KEY, e.target.value); }catch(err){ /* almacenamiento no disponible: no es crítico */ }
+  });
+
   // ---------- init ----------
   buildTabs();
   document.getElementById("lenField").style.display = "none";
+  document.getElementById("timeField").style.display = "none";
+  try{
+    const savedName = localStorage.getItem(STUDENT_NAME_KEY);
+    if(savedName) document.getElementById("studentName").value = savedName;
+  }catch(err){ /* almacenamiento no disponible: no es crítico */ }
   newPiece();
 
   if("serviceWorker" in navigator){
