@@ -263,7 +263,7 @@
       <h2 style="margin-top:16px;">Bitácora de sesión</h2>
       <div class="history-wrap">
         <table>
-          <thead><tr><th>#</th><th>Leído</th><th>Correcto</th><th>Error</th></tr></thead>
+          <thead><tr><th>#</th><th>Leído</th><th>Correcto</th><th>Error</th><th>Tiempo</th></tr></thead>
           <tbody id="historyBody"></tbody>
         </table>
       </div>
@@ -304,7 +304,8 @@
         lectura_texto: record.enteredDisplay || "",
         error: record.error,
         valor_correcto_mm: mmVal,
-        timestamp: record.ts
+        timestamp: record.ts,
+        tiempo_respuesta_s: record.tiempoRespuestaSegundos
       })
     }).then(()=>{
       if(statusEl) statusEl.innerHTML = "✓ enviado a la hoja de registro";
@@ -411,7 +412,8 @@
     evalCount: 0,
     evalActive: false,
     evalDeadline: null,   // timestamp (ms) en que se cierra la evaluación por tiempo, o null si no hay límite
-    evalTimerId: null
+    evalTimerId: null,
+    pieceShownAt: null    // timestamp (ms) en que se mostró la pieza actual, para medir el tiempo de respuesta
   };
 
   // ---------- SVG: calibrador vernier (doble escala, un solo cuerpo) ----------
@@ -685,6 +687,7 @@
   function newPiece(){
     const inst = INSTRUMENTS[state.instrument];
     state.currentValueMM = inst.genValueMM();
+    state.pieceShownAt = Date.now();
     state.answerUnit = state.unitByInst[state.instrument] || "mm";
     document.getElementById("instTitle").textContent = inst.label;
     document.getElementById("instMeta").innerHTML = `${inst.metaMM}<br>${inst.metaIN}`;
@@ -764,7 +767,8 @@
     const enteredDisplay = uConf.isFraction ? raw.trim() : entered.toFixed(uConf.decimals) + " " + unit;
     const enteredExact = uConf.isFraction ? raw.trim() : entered.toFixed(uConf.decimals);
     const unitDisplay = UNIT_NAMES[unit] || unit;
-    const record = { inst: state.instrument, mode: state.mode, unit, unitDisplay, value: correct, entered, enteredDisplay, enteredExact, error, ts: new Date().toISOString() };
+    const tiempoRespuestaSegundos = state.pieceShownAt ? Math.round((Date.now() - state.pieceShownAt)/10)/100 : null;
+    const record = { inst: state.instrument, mode: state.mode, unit, unitDisplay, value: correct, entered, enteredDisplay, enteredExact, error, ts: new Date().toISOString(), tiempoRespuestaSegundos };
     state.history.push(record);
     sendToSheet(record);
 
@@ -795,6 +799,7 @@
   function newPieceKeepMode(){
     const inst = INSTRUMENTS[state.instrument];
     state.currentValueMM = inst.genValueMM();
+    state.pieceShownAt = Date.now();
     randomizeAnswerUnit();
     updateUnitUI();
     renderSVG();
@@ -842,7 +847,8 @@
       const okness = r.error <= uConf.resolution + 1e-6;
       const entered = r.enteredDisplay || `${r.entered.toFixed(uConf.decimals)} ${r.unit}`;
       const correct = uConf.isFraction ? `${formatFraction(r.value, uConf.fracDen)}` : `${r.value.toFixed(uConf.decimals)} ${r.unit}`;
-      return `<tr><td>${rows.length-idx}</td><td>${entered}</td><td>${correct}</td><td class="err-cell ${okness?'good':'bad'}">${r.error.toFixed(uConf.decimals)}</td></tr>`;
+      const tiempo = r.tiempoRespuestaSegundos != null ? `${r.tiempoRespuestaSegundos.toFixed(1)} s` : "—";
+      return `<tr><td>${rows.length-idx}</td><td>${entered}</td><td>${correct}</td><td class="err-cell ${okness?'good':'bad'}">${r.error.toFixed(uConf.decimals)}</td><td>${tiempo}</td></tr>`;
     }).join("");
   }
 
@@ -895,12 +901,13 @@
   function downloadCSV(){
     if(state.history.length===0){ alert("Todavía no hay lecturas registradas."); return; }
     const name = document.getElementById("studentName").value.trim() || "anonimo";
-    let csv = "estudiante,instrumento,modo,unidad,valor_correcto,lectura_estudiante,lectura_texto,error,valor_correcto_mm,timestamp\n";
+    let csv = "estudiante,instrumento,modo,unidad,valor_correcto,lectura_estudiante,lectura_texto,error,valor_correcto_mm,timestamp,tiempo_respuesta_s\n";
     state.history.forEach(r=>{
       const mmVal = r.unit==="mm" ? r.value : r.value*MM_PER_IN;
       const texto = (r.enteredDisplay || "").replace(/,/g, ";");
       const exacto = (r.enteredExact != null ? r.enteredExact : r.entered.toFixed(4)).toString().replace(/,/g, ";");
-      csv += `${name},${r.inst},${r.mode},${r.unit},${r.value.toFixed(4)},${exacto},${texto},${r.error.toFixed(4)},${mmVal.toFixed(4)},${r.ts}\n`;
+      const tiempo = r.tiempoRespuestaSegundos != null ? r.tiempoRespuestaSegundos : "";
+      csv += `${name},${r.inst},${r.mode},${r.unit},${r.value.toFixed(4)},${exacto},${texto},${r.error.toFixed(4)},${mmVal.toFixed(4)},${r.ts},${tiempo}\n`;
     });
     const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
     const url = URL.createObjectURL(blob);
