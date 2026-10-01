@@ -5,6 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Simulador de instrumentos de medición</title>
 <meta name="description" content="Práctica de lectura de vernier, micrómetro y comparador de carátula, en milímetros y en pulgadas.">
+<meta name="author" content="Juan Luis Hernández Méndez (ORCID 0000-0002-5686-2887), Universidad Autónoma de Nayarit">
+<link rel="license" href="https://opensource.org/licenses/MIT">
+<!-- Metadatos bibliográficos (Google Scholar y gestores de referencias) -->
+<meta name="citation_title" content="Simulador Metrológico: simulador virtual interactivo para la enseñanza de la lectura de instrumentos de medición mecánica (calibrador vernier, micrómetro y comparador de carátula)">
+<meta name="citation_author" content="Hernández Méndez, Juan Luis">
+<meta name="citation_author_institution" content="Universidad Autónoma de Nayarit">
+<meta name="citation_author_orcid" content="0000-0002-5686-2887">
+<meta name="citation_publication_date" content="2026/10/01">
+<meta name="citation_publisher" content="Universidad Autónoma de Nayarit">
+<meta name="citation_language" content="es">
 
 <!-- Vista previa al compartir el enlace (WhatsApp, Facebook, redes, etc.) -->
 <meta property="og:type" content="website">
@@ -192,6 +202,33 @@
   .summary .big{font-family:'IBM Plex Mono';font-size:22px;color:var(--amber);font-weight:600;}
 
   footer{margin-top:26px;font-size:12px;color:var(--text-dim);border-top:1px solid var(--grid);padding-top:14px;}
+  .credbar{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin-top:10px;}
+  .linkbtn{background:none;border:none;padding:0;color:var(--amber);font:inherit;font-weight:500;cursor:pointer;text-decoration:underline;text-underline-offset:2px;}
+  .linkbtn:hover{color:#ffbf2e;}
+
+  /* ---------- créditos y cómo citar ---------- */
+  #credits{border:1px solid var(--grid);border-radius:8px;background:var(--panel);color:var(--steel);padding:0;
+    width:min(740px,calc(100vw - 32px));max-height:calc(100vh - 32px);}
+  #credits::backdrop{background:rgba(8,12,17,.7);}
+  #credits .cin{padding:18px 20px 20px;display:grid;gap:16px;}
+  #credits h2{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:28px;margin:0;line-height:1.05;color:#f4f7f9;}
+  #credits h3{font-family:'Barlow Condensed',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:.08em;font-size:14px;color:var(--amber);margin:0 0 6px;}
+  #credits .csub{margin:6px 0 0;color:var(--text-dim);font-size:14px;line-height:1.5;}
+  #credits .meta{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13.5px;margin:0;}
+  #credits .meta dt{color:var(--text-dim);}
+  #credits .meta dd{margin:0;overflow-wrap:anywhere;}
+  #credits a{color:var(--amber);}
+  #credits .cite{background:var(--ink);border:1px solid var(--grid);border-radius:5px;padding:10px 12px;font-size:13.5px;line-height:1.55;overflow-wrap:anywhere;white-space:pre-wrap;}
+  #credits .cite.mono{font-family:'IBM Plex Mono',monospace;font-size:12px;}
+  #credits .ctabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;}
+  #credits .ctabs button{font-family:'IBM Plex Sans';font-size:12.5px;border:1px solid var(--grid);background:var(--panel-2);color:var(--text-dim);padding:5px 11px;border-radius:4px;cursor:pointer;}
+  #credits .ctabs button[aria-pressed="true"]{background:var(--amber);border-color:var(--amber);color:#1a1305;font-weight:600;}
+  #credits .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;}
+  #credits .x{float:right;border:0;background:none;font-size:26px;color:var(--text-dim);line-height:1;cursor:pointer;margin:-6px -6px 0 0;}
+  #credits .x:hover{color:var(--steel);}
+  #credits small{color:var(--text-dim);font-size:12px;}
+  #credits p{font-size:13.5px;line-height:1.55;margin:0;}
+  @media (max-width:520px){#credits .meta{grid-template-columns:1fr;gap:0;} #credits .meta dd{margin-bottom:6px;}}
 </style>
 </head>
 <body>
@@ -272,8 +309,31 @@
 
   <footer>
     Prototipo desarrollado para el protocolo de investigación «Diseño y validación de un módulo virtual/interactivo para la enseñanza de instrumentos de medición mecánica». Cada instrumento se dibuja con su escala métrica y su escala en pulgadas sobre la misma pieza (resoluciones: vernier 0.05 mm / 1/128 in · micrómetro 0.01 mm / 0.001 in · comparador 0.01 mm / 0.001 in por vuelta). Estos valores pueden ajustarse según el instrumento real usado como referencia en la validación de expertos.
+    <div class="credbar"><span id="credline"></span><span aria-hidden="true">·</span><button class="linkbtn" id="opencredits" type="button">Créditos y cómo citar</button></div>
   </footer>
 </div>
+
+<dialog id="credits" aria-labelledby="credtitle">
+  <div class="cin">
+    <div>
+      <button class="x" id="credclose" type="button" aria-label="Cerrar">×</button>
+      <p class="eyebrow">SOFTWARE EDUCATIVO LIBRE · LICENCIA MIT</p>
+      <h2 id="credtitle"></h2>
+      <p class="csub" id="credsub"></p>
+    </div>
+    <div><h3>Autoría</h3><dl class="meta" id="credmeta"></dl></div>
+    <div>
+      <h3>Cómo citar este software</h3>
+      <div class="ctabs" role="group" aria-label="Formato de cita">
+        <button type="button" data-fmt="apa" aria-pressed="true">APA 7</button><button type="button" data-fmt="ieee" aria-pressed="false">IEEE</button><button type="button" data-fmt="iso" aria-pressed="false">ISO 690</button><button type="button" data-fmt="bib" aria-pressed="false">BibTeX</button><button type="button" data-fmt="ris" aria-pressed="false">RIS</button>
+      </div>
+      <div class="cite" id="citebox"></div>
+      <div class="row"><button class="btn" type="button" id="citecopy">Copiar cita</button><button class="btn" type="button" id="citedl">Descargar .bib / .ris</button><small id="citemsg" aria-live="polite"></small></div>
+    </div>
+    <div><h3>Créditos</h3><p id="credthanks"></p></div>
+    <div><h3>Licencia</h3><p>Distribuido bajo la licencia MIT: puedes usar, copiar, modificar y redistribuir este software libremente, conservando el aviso de autoría. Se ofrece «tal cual», sin garantía; las resoluciones de los instrumentos simulados son didácticas y deben verificarse contra el instrumento real.</p></div>
+  </div>
+</dialog>
 
 <script>
 (function(){
@@ -977,6 +1037,129 @@
       navigator.serviceWorker.register("sw.js").catch(()=>{ /* sin servidor no hay SW; la app sigue funcionando */ });
     });
   }
+})();
+</script>
+
+<script>
+/* ===================== Créditos y cómo citar =====================
+   Para actualizar la autoría, la versión o el DOI, edita solo el bloque META. */
+(function(){
+  "use strict";
+  const META = {
+    titulo: "Simulador Metrológico",
+    subtitulo: "Simulador virtual interactivo para la enseñanza de la lectura de instrumentos de medición mecánica (calibrador vernier, micrómetro y comparador de carátula)",
+    version: "1.0.0",
+    fecha: "2026-10-01",
+    autores: [{
+      nombre: "Juan Luis", apellidos: "Hernández Méndez",
+      orcid: "0000-0002-5686-2887", correo: "juan.l@uan.edu.mx",
+      afil: "Universidad Autónoma de Nayarit, Unidad Académica de Ciencias Básicas e Ingenierías, Programa Académico de Ingeniería Mecánica, Tepic, Nayarit, México",
+      rol: "Concepción, diseño didáctico, modelado de las escalas de los instrumentos, desarrollo de software y validación"
+    }],
+    editor: "Universidad Autónoma de Nayarit",
+    lugar: "Tepic, Nayarit, México",
+    doi: "",          /* DOI de concepto (todas las versiones); se llena al publicar en Zenodo */
+    doiVersion: "",   /* DOI de esta versión */
+    url: "https://juanl-droid.github.io/Simulador-Metrologico/",
+    repo: "https://github.com/juanl-droid/Simulador-Metrologico",
+    licencia: "MIT",
+    palabras: ["metrología", "instrumentos de medición", "calibrador vernier", "micrómetro", "comparador de carátula", "simulador virtual", "enseñanza de la ingeniería", "software educativo"],
+    agradecimientos: "A los estudiantes de Ingeniería Mecánica de la Universidad Autónoma de Nayarit, cuya práctica y retroalimentación orientaron el diseño de la herramienta, y a los expertos que participaron en su validación."
+  };
+
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const M = META, yr = M.fecha.slice(0,4), hasDoi = !!M.doi;
+  const ini = n => n.split(/\s+/).filter(Boolean).map(w => w[0].toUpperCase()+".").join(" ");
+  const apaA = a => `${a.apellidos}, ${ini(a.nombre)}`;
+  const ieeeA = a => `${ini(a.nombre)} ${a.apellidos}`;
+  const join = (xs,f,last) => xs.length===1 ? f(xs[0]) : xs.slice(0,-1).map(f).join(", ")+last+f(xs[xs.length-1]);
+  const link = hasDoi ? "https://doi.org/"+M.doi : M.url;
+  const sub1 = M.subtitulo.charAt(0).toLowerCase()+M.subtitulo.slice(1);
+  const key = M.autores[0].apellidos.split(/\s+/)[0].normalize("NFD").replace(/[^A-Za-z]/g,"").toLowerCase()+yr+"metrologico";
+
+  const fmt = {
+    apa: () => `${join(M.autores,apaA,", & ")} (${yr}). <i>${esc(M.titulo)}: ${esc(sub1)}</i> (Versión ${M.version}) [Software]. ${esc(M.editor)}. ${link}`,
+    ieee: () => `${join(M.autores,ieeeA," y ")}, “${esc(M.titulo)}: ${esc(sub1)},” versión ${M.version}, ${esc(M.editor)}, ${esc(M.lugar)}, ${yr}. [En línea]. Disponible: ${M.url}${hasDoi ? ". doi: "+M.doi : ""}`,
+    iso: () => `${join(M.autores,a=>a.apellidos.toUpperCase()+", "+a.nombre,"; ")}. <i>${esc(M.titulo)}: ${esc(sub1)}</i> [software]. Versión ${M.version}. Tepic: ${esc(M.editor)}, ${yr}. ${hasDoi ? "DOI "+M.doi+". " : ""}Disponible en: ${hasDoi ? link : M.url}`,
+    bib: () => `@software{${key},
+  author     = {${M.autores.map(a=>a.apellidos+", "+a.nombre).join(" and ")}},
+  title      = {{${M.titulo}}: ${M.subtitulo}},
+  version    = {${M.version}},
+  year       = {${yr}},
+  date       = {${M.fecha}},
+  publisher  = {${M.editor}},
+  address    = {${M.lugar}},
+  license    = {${M.licencia}},
+  url        = {${M.url}},
+  repository = {${M.repo}},${hasDoi ? `
+  doi        = {${M.doi}},` : ""}
+  keywords   = {${M.palabras.join(", ")}}
+}`,
+    ris: () => ["TY  - COMP", ...M.autores.map(a=>"AU  - "+a.apellidos+", "+a.nombre),
+      "TI  - "+M.titulo+": "+M.subtitulo, "PY  - "+yr, "DA  - "+M.fecha.replace(/-/g,"/"),
+      "ET  - "+M.version, "PB  - "+M.editor, "CY  - "+M.lugar, "UR  - "+M.url,
+      ...(hasDoi ? ["DO  - "+M.doi] : []), ...M.palabras.map(k=>"KW  - "+k), "LA  - es", "ER  - "].join("\n")
+  };
+
+  let cur = "apa";
+  const plain = h => { const d = document.createElement("div"); d.innerHTML = h; return d.textContent; };
+  const raw = f => f==="bib" || f==="ris";
+
+  function render(){
+    $("credline").textContent = `${M.titulo} v${M.version} · software libre (MIT) · ${M.autores.map(a=>a.nombre+" "+a.apellidos).join(", ")} · ${M.editor}`;
+    $("credtitle").textContent = M.titulo;
+    $("credsub").textContent = M.subtitulo + ".";
+    $("credmeta").innerHTML = M.autores.map(a =>
+      `<dt>Autor</dt><dd><b>${esc(a.nombre+" "+a.apellidos)}</b></dd>`+
+      `<dt>ORCID</dt><dd><a href="https://orcid.org/${a.orcid}" target="_blank" rel="noopener">https://orcid.org/${a.orcid}</a></dd>`+
+      `<dt>Contacto</dt><dd><a href="mailto:${a.correo}">${a.correo}</a></dd>`+
+      `<dt>Adscripción</dt><dd>${esc(a.afil)}</dd>`+
+      `<dt>Contribución</dt><dd>${esc(a.rol)}</dd>`).join("")+
+      `<dt>Versión</dt><dd>${M.version} (${M.fecha})</dd>`+
+      `<dt>DOI</dt><dd>${hasDoi ? `<a href="https://doi.org/${M.doi}" target="_blank" rel="noopener">${M.doi}</a> <small>(todas las versiones)</small>` : "En trámite (Zenodo)"}</dd>`+
+      (M.doiVersion ? `<dt>DOI v${M.version}</dt><dd><a href="https://doi.org/${M.doiVersion}" target="_blank" rel="noopener">${M.doiVersion}</a></dd>` : "")+
+      `<dt>Aplicación</dt><dd><a href="${M.url}" target="_blank" rel="noopener">${M.url}</a></dd>`+
+      `<dt>Código fuente</dt><dd><a href="${M.repo}" target="_blank" rel="noopener">${M.repo}</a></dd>`+
+      `<dt>Licencia</dt><dd>MIT (software libre)</dd>`;
+    $("credthanks").textContent = M.agradecimientos;
+    const h = fmt[cur]();
+    $("citebox").innerHTML = raw(cur) ? esc(h) : h;
+    $("citebox").classList.toggle("mono", raw(cur));
+  }
+
+  function copyText(txt){
+    const done = () => { $("citemsg").textContent = "Cita copiada."; };
+    const fallback = () => {
+      const r = document.createRange(); r.selectNodeContents($("citebox"));
+      const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      try{ document.execCommand("copy") ? done() : ($("citemsg").textContent = "Texto seleccionado: cópialo con Ctrl+C."); }
+      catch(e){ $("citemsg").textContent = "Texto seleccionado: cópialo con Ctrl+C."; }
+    };
+    if(navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(txt).then(done, fallback);
+    else fallback();
+  }
+
+  document.querySelectorAll("#credits [data-fmt]").forEach(b => b.addEventListener("click", () => {
+    cur = b.dataset.fmt;
+    document.querySelectorAll("#credits [data-fmt]").forEach(x => x.setAttribute("aria-pressed", String(x===b)));
+    $("citemsg").textContent = ""; render();
+  }));
+  $("citecopy").addEventListener("click", () => copyText(raw(cur) ? fmt[cur]() : plain(fmt[cur]())));
+  $("citedl").addEventListener("click", () => {
+    const isR = cur==="ris", txt = isR ? fmt.ris() : fmt.bib(), nm = `simulador-metrologico-v${M.version}.${isR?"ris":"bib"}`;
+    try{
+      const u = URL.createObjectURL(new Blob([txt], {type:"text/plain;charset=utf-8"}));
+      const l = document.createElement("a"); l.href = u; l.download = nm; document.body.appendChild(l); l.click(); l.remove();
+      setTimeout(() => URL.revokeObjectURL(u), 2000);
+      $("citemsg").textContent = "Descargado: "+nm;
+    }catch(e){ $("citemsg").textContent = "No se pudo descargar; usa «Copiar cita»."; }
+  });
+  const dlg = $("credits");
+  $("opencredits").addEventListener("click", () => { render(); dlg.showModal ? dlg.showModal() : dlg.setAttribute("open",""); });
+  $("credclose").addEventListener("click", () => dlg.close ? dlg.close() : dlg.removeAttribute("open"));
+  dlg.addEventListener("click", e => { if(e.target===dlg) dlg.close(); });
+  render();
 })();
 </script>
 </body>

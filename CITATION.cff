@@ -1,0 +1,40 @@
+cff-version: 1.2.0
+message: "Si utilizas este software en docencia o investigación, por favor cítalo como se indica a continuación."
+type: software
+title: "Simulador Metrológico: simulador virtual interactivo para la enseñanza de la lectura de instrumentos de medición mecánica (calibrador vernier, micrómetro y comparador de carátula)"
+abstract: >-
+  Aplicación web progresiva, libre y sin registro, para que estudiantes de ingeniería
+  practiquen la lectura de instrumentos de medición mecánica: calibrador vernier
+  (0.05 mm / 1/128 in), micrómetro (0.01 mm / 0.001 in) y comparador de carátula
+  (0.01 mm / 0.001 in). Cada instrumento se dibuja con su escala métrica y su escala en
+  pulgadas sobre la misma pieza, generada al azar, y el estudiante responde en mm, en
+  pulgada decimal o en pulgada fraccionaria. Incluye modo de práctica con
+  retroalimentación inmediata y ayuda de alineación, modo de evaluación con número de
+  piezas y tiempo límite configurables, bitácora de sesión con error y tiempo por
+  lectura, exportación de resultados a CSV y registro automático de cada lectura en una
+  hoja de cálculo para investigación educativa. Funciona sin conexión una vez instalada.
+authors:
+  - given-names: "Juan Luis"
+    family-names: "Hernández Méndez"
+    orcid: "https://orcid.org/0000-0002-5686-2887"
+    email: "juan.l@uan.edu.mx"
+    affiliation: "Universidad Autónoma de Nayarit, Unidad Académica de Ciencias Básicas e Ingenierías, Programa Académico de Ingeniería Mecánica"
+    city: "Tepic"
+    region: "Nayarit"
+    country: "MX"
+version: "1.0.0"
+date-released: "2026-10-01"
+license: MIT
+url: "https://juanl-droid.github.io/Simulador-Metrologico/"
+repository-code: "https://github.com/juanl-droid/Simulador-Metrologico"
+keywords:
+  - metrología
+  - instrumentos de medición
+  - calibrador vernier
+  - micrómetro
+  - comparador de carátula
+  - simulador virtual
+  - enseñanza de la ingeniería
+  - software educativo
+  - metrology
+  - engineering education

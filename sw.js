@@ -1,4 +1,4 @@
-const CACHE_NAME = "metrologia-sim-v2";
+const CACHE_NAME = "metrologia-sim-v3";
 const CORE_ASSETS = [
   "./index.html",
   "./manifest.webmanifest",
