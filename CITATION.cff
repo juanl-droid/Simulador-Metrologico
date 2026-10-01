@@ -24,6 +24,14 @@ authors:
     country: "MX"
 version: "1.0.0"
 date-released: "2026-10-01"
+doi: "10.5281/zenodo.23088996"
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.23088996"
+    description: "DOI de concepto (todas las versiones)"
+  - type: doi
+    value: "10.5281/zenodo.23088997"
+    description: "DOI de la versión 1.0.0"
 license: MIT
 url: "https://juanl-droid.github.io/Simulador-Metrologico/"
 repository-code: "https://github.com/juanl-droid/Simulador-Metrologico"

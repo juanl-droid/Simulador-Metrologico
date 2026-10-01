@@ -4,7 +4,7 @@
 
 [![Licencia: MIT](https://img.shields.io/badge/licencia-MIT-blue.svg)](LICENSE)
 [![ORCID](https://img.shields.io/badge/ORCID-0000--0002--5686--2887-a6ce39.svg)](https://orcid.org/0000-0002-5686-2887)
-<!-- DOI_BADGE -->
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23088996.svg)](https://doi.org/10.5281/zenodo.23088996)
 
 Aplicación en línea: **<https://juanl-droid.github.io/Simulador-Metrologico/>** — libre, sin registro e instalable en teléfono o computadora; funciona sin conexión.
 
@@ -23,10 +23,10 @@ Cada instrumento se dibuja con su escala métrica (mm) y su escala en pulgadas (
 Si usas el Simulador Metrológico en docencia o investigación, cítalo así (también disponible en el botón **Cite this repository** de GitHub y en la app, al pie: *Créditos y cómo citar*):
 
 **APA 7**
-> Hernández Méndez, J. L. (2026). *Simulador Metrológico: simulador virtual interactivo para la enseñanza de la lectura de instrumentos de medición mecánica (calibrador vernier, micrómetro y comparador de carátula)* (Versión 1.0.0) [Software]. Universidad Autónoma de Nayarit. https://juanl-droid.github.io/Simulador-Metrologico/
+> Hernández Méndez, J. L. (2026). *Simulador Metrológico: simulador virtual interactivo para la enseñanza de la lectura de instrumentos de medición mecánica (calibrador vernier, micrómetro y comparador de carátula)* (Versión 1.0.0) [Software]. Universidad Autónoma de Nayarit. https://doi.org/10.5281/zenodo.23088996
 
 **IEEE**
-> J. L. Hernández Méndez, “Simulador Metrológico: simulador virtual interactivo para la enseñanza de la lectura de instrumentos de medición mecánica (calibrador vernier, micrómetro y comparador de carátula),” versión 1.0.0, Universidad Autónoma de Nayarit, Tepic, Nayarit, México, 2026. [En línea]. Disponible: https://juanl-droid.github.io/Simulador-Metrologico/
+> J. L. Hernández Méndez, “Simulador Metrológico: simulador virtual interactivo para la enseñanza de la lectura de instrumentos de medición mecánica (calibrador vernier, micrómetro y comparador de carátula),” versión 1.0.0, Universidad Autónoma de Nayarit, Tepic, Nayarit, México, 2026. [En línea]. Disponible: https://juanl-droid.github.io/Simulador-Metrologico/. doi: 10.5281/zenodo.23088996
 
 **BibTeX**
 ```bibtex
@@ -36,12 +36,13 @@ Si usas el Simulador Metrológico en docencia o investigación, cítalo así (ta
   version   = {1.0.0},
   year      = {2026},
   publisher = {Universidad Autónoma de Nayarit},
+  doi       = {10.5281/zenodo.23088996},
   url       = {https://juanl-droid.github.io/Simulador-Metrologico/},
   license   = {MIT}
 }
 ```
 
-<!-- DOI_NOTE -->
+El DOI de arriba (*concept DOI*) siempre apunta a la versión más reciente. DOI de la versión 1.0.0: [10.5281/zenodo.23088997](https://doi.org/10.5281/zenodo.23088997). Registro en Zenodo: <https://zenodo.org/records/23088997>
 
 ## Autoría
 
