@@ -143,6 +143,7 @@
   .grid2{display:grid;grid-template-columns:1.55fr 1fr;gap:18px;}
   @media (max-width:880px){.grid2{grid-template-columns:1fr;}}
 
+  .grid2 > .panel{min-width:0;}
   .panel{background:var(--panel);border:1px solid var(--grid);border-radius:6px;padding:18px;}
   .panel h2{
     font-family:'Barlow Condensed'; font-weight:600; font-size:18px; margin:0 0 4px; color:#f4f7f9;
@@ -150,6 +151,19 @@
   .panel .meta{font-size:12.5px;color:var(--text-dim);margin:0 0 14px;font-family:'IBM Plex Mono';line-height:1.6;}
 
   .instrument-svg{width:100%;height:auto;display:block;background:var(--panel-2);border:1px solid var(--grid);border-radius:5px;}
+  .sim-ov{user-select:none;-webkit-user-select:none;}
+  .sim-dial{max-width:520px;margin:0 auto;}
+  .lupa{margin-top:10px;}
+  .lupa-tag{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--amber);margin:0 0 5px;letter-spacing:.02em;}
+  .lupa-scroll{overflow-x:auto;border-radius:5px;-webkit-overflow-scrolling:touch;}
+  .lupa-svg{border-color:var(--amber-dim);user-select:none;-webkit-user-select:none;}
+  .lupa-wide{min-width:700px;}
+  .lupa-swipe{display:none;}
+  @media (max-width:760px){.lupa-swipe{display:inline;}}
+  .simbar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-top:10px;}
+  .simstatus{flex:1 1 260px;font-size:13px;line-height:1.45;color:var(--text-dim);}
+  .simstatus.ok{color:var(--good);font-weight:500;}
+  .simbtns{display:flex;gap:6px;flex-wrap:wrap;}
 
   .dualWrap{display:flex;gap:14px;flex-wrap:wrap;}
   .faceCol{flex:1 1 260px;min-width:240px;}
@@ -237,7 +251,7 @@
   <header>
     <p class="eyebrow">MÓDULO DE METROLOGÍA · PROTOTIPO DE VALIDACIÓN</p>
     <h1>Simulador de instrumentos de medición</h1>
-    <p class="sub">Práctica de lectura de vernier, micrómetro y comparador de carátula. Cada instrumento muestra su escala métrica (mm) y su escala en pulgadas (in) para la misma pieza — tú eliges en qué sistema respondes.</p>
+    <p class="sub">Mide piezas con un calibrador vernier, un micrómetro y un comparador de carátula como los reales: manipula el instrumento hasta tocar la pieza y toma la lectura en milímetros o en pulgadas.</p>
   </header>
 
   <div class="toolbar">
@@ -283,7 +297,7 @@
         <button data-unit="infrac">Pulgadas — fracción</button>
       </div>
       <div id="svgHolder"></div>
-      <label class="help-toggle"><input type="checkbox" id="helpToggle"> Mostrar ayuda de alineación (línea de referencia)</label>
+      <label class="help-toggle"><input type="checkbox" id="helpToggle"> Mostrar ayuda de lectura (línea verde de referencia, solo en práctica)</label>
       <div class="instructions" id="instructions"></div>
     </div>
 
@@ -295,7 +309,7 @@
         <input type="number" step="0.01" id="readingInput" placeholder="0.00">
         <button class="btn primary" id="submitBtn">Verificar</button>
       </div>
-      <p class="unit-hint" id="unitHint">Elige en qué unidad vas a responder (mm o in); ambas escalas del instrumento son válidas para leer.</p>
+      <p class="unit-hint" id="unitHint">Elige en qué unidad vas a responder (mm o in); el instrumento se lee igual; solo cambia la escala.</p>
       <div class="feedback" id="feedback">Escribe tu lectura y presiona Verificar.</div>
       <div id="summaryHolder"></div>
       <h2 style="margin-top:16px;">Bitácora de sesión</h2>
@@ -419,7 +433,7 @@
 
   const INSTRUMENTS = {
     vernier: {
-      label: "Calibrador vernier (doble escala)",
+      label: "Calibrador vernier",
       metaMM: "escala métrica · resolución 0.05 mm · rango 0–150 mm",
       metaIN: "escala en pulgadas · resolución 1/128 in (0.0078 in) · rango 0–6 in",
       units: {
@@ -427,15 +441,15 @@
         in: { resolution: 1/128, decimals: 4 },
         infrac: { resolution: 1/128, decimals: 4, isFraction: true, fracDen: 128 }
       },
-      instructions: "Este calibrador tiene dos escalas grabadas sobre el mismo cuerpo, arriba en milímetros y abajo en pulgadas — ambas describen la misma posición de la mordaza. Escala métrica: cuenta los milímetros completos antes del cero del nonio; busca qué línea del nonio (0–20) coincide exactamente con una línea de la escala fija — ese número son las centésimas de milímetro (resolución 0.05 mm) que sumas. Escala en pulgadas: cuenta los dieciseisavos completos antes del cero del nonio inferior; el nonio de 8 divisiones indica múltiplos de 1/128\" a sumar. Puedes responder en milímetros, en pulgadas decimales (ej. 0.0781 in) o en pulgadas como fracción (ej. 5/128) — elige con el selector.",
+      instructions: "Arrastra la corredera hasta que las mordazas toquen la pieza (o usa el botón «Cerrar las mordazas»). Lee en la lupa. Milímetros (escala inferior): cuenta los milímetros completos que quedan a la izquierda del cero del nonio; después busca la línea del nonio que coincide exactamente con una línea de la regla: cada número del nonio vale 0.1 mm y la línea intermedia 0.05 mm. Pulgadas (escala superior): cuenta los dieciseisavos completos antes del cero del nonio superior; la línea del nonio (0 a 8) que coincide indica cuántos 1/128 in se suman. Puedes responder en milímetros, en pulgada decimal (ej. 0.0781) o en fracción (ej. 5/128).",
       genValueMM(){
-        const steps = Math.floor(Math.random()*3001); // 0..150mm en pasos de 0.05mm
+        const steps = 10 + Math.floor(Math.random()*2791); // 0.50..140 mm en pasos de 0.05 mm
         return steps*0.05;
       },
-      render(valueMM, showHelp, unit){ return renderVernierSingle(valueMM, showHelp, unit); }
+      build(valueMM, unit, showHelp){ return buildVernier(valueMM, unit, showHelp); }
     },
     micrometro: {
-      label: "Micrómetro (doble escala)",
+      label: "Micrómetro",
       metaMM: "escala mm · resolución 0.01 mm · rango 0–25 mm",
       metaIN: "escala en pulgadas · resolución 0.001 in · rango 0–1 in",
       units: {
@@ -443,12 +457,12 @@
         in: { resolution: 0.001, decimals: 3 },
         infrac: { resolution: 0.001, decimals: 3, isFraction: true, fracDen: 1000 }
       },
-      instructions: "Se muestran dos micrómetros con la misma lectura física: uno graduado en mm y otro en pulgadas. Escala mm: lee en el manguito el último milímetro y, si está visible, la marca de 0.5 mm; en el tambor (50 divisiones) lee qué número coincide con la línea de referencia — son centésimas de mm. Escala pulgadas: lee en el manguito el último 0.1\" y, si está visible, la marca de 0.025\" siguiente; en el tambor (25 divisiones) lee las milésimas de pulgada. Puedes responder en milímetros, en pulgadas decimales (ej. 0.235 in) o en pulgadas como fracción de milésimas (ej. 235/1000) — elige con el selector.",
-      genValueMM(){ const v = Math.random()*25; return Math.round(v*100)/100; },
-      render(valueMM, showHelp, unit){ return renderMicrometerSingle(valueMM, showHelp, unit); }
+      instructions: "Arrastra el tambor hacia la izquierda para acercar el husillo y gíralo fino (arrastre vertical) hasta que el trinquete indique el contacto con la pieza. Lee en la lupa. Milímetros: en el manguito cuenta los milímetros enteros visibles (líneas de arriba) y suma 0.5 mm si ya se descubrió la media línea de abajo; en el tambor (50 divisiones) lee la línea que coincide con la línea índice: son centésimas de mm. Pulgadas: en el manguito cada número vale 0.1 in y cada línea 0.025 in; el tambor (25 divisiones) da las milésimas de pulgada. Puedes responder en milímetros, en pulgada decimal (ej. 0.235) o en fracción de milésimas (ej. 235/1000).",
+      genValueMM(){ const v = 0.5 + Math.random()*23.5; return Math.round(v*100)/100; },
+      build(valueMM, unit, showHelp){ return buildMicrometer(valueMM, unit, showHelp); }
     },
     comparador: {
-      label: "Comparador de carátula (doble escala)",
+      label: "Comparador de carátula",
       metaMM: "escala mm · resolución 0.01 mm/vuelta · rango 0–10 mm",
       metaIN: "escala en pulgadas · resolución 0.001 in/vuelta · rango 0–0.5 in (≈12.7 mm)",
       units: {
@@ -456,9 +470,9 @@
         in: { resolution: 0.001, decimals: 3 },
         infrac: { resolution: 0.001, decimals: 3, isFraction: true, fracDen: 1000 }
       },
-      instructions: "Se muestran dos comparadores de carátula con la misma lectura física. Escala mm: el dial pequeño indica los milímetros enteros (vueltas completas) y el dial grande las centésimas de mm. Escala pulgadas: el dial pequeño indica las décimas de pulgada (una vuelta completa del dial grande equivale a 0.1\") y el dial grande las milésimas de pulgada. Puedes responder en milímetros, en pulgadas decimales (ej. 0.235 in) o en pulgadas como fracción de milésimas (ej. 235/1000) — elige con el selector.",
-      genValueMM(){ const v = Math.random()*10; return Math.round(v*100)/100; },
-      render(valueMM, showHelp, unit){ return renderComparadorSingle(valueMM, showHelp, unit); }
+      instructions: "El comparador está montado en su soporte, con el palpador apoyado en la mesa de referencia y la carátula en cero. Desliza la pieza bajo el palpador: la varilla sube y mueve las agujas. Milímetros: la aguja pequeña cuenta las vueltas completas (milímetros enteros) y la aguja grande las centésimas de mm. Pulgadas: la aguja pequeña cuenta décimas de pulgada (una vuelta de la aguja grande equivale a 0.1 in) y la aguja grande las milésimas. Puedes responder en milímetros, en pulgada decimal (ej. 0.235) o en fracción de milésimas (ej. 235/1000).",
+      genValueMM(){ const v = 0.5 + Math.random()*9.4; return Math.round(v*100)/100; },
+      build(valueMM, unit, showHelp){ return buildComparador(valueMM, unit, showHelp); }
     }
   };
 
@@ -477,217 +491,392 @@
     pieceShownAt: null    // timestamp (ms) en que se mostró la pieza actual, para medir el tiempo de respuesta
   };
 
-  // ---------- SVG: calibrador vernier (doble escala, un solo cuerpo) ----------
+  // ---------- instrumentos interactivos (aspecto físico real) ----------
+  // Cada instrumento se dibuja completo (vista general) y, cuando hace falta, con una
+  // lupa sobre la zona de lectura. El estudiante lo manipula (arrastra la corredera,
+  // gira el tambor o desliza la pieza bajo el palpador) hasta hacer contacto con la pieza.
 
-  function renderVernierSingle(valueMM, showHelp, unit){
-    const marginL = 34, y = 64, height = 158;
-    if(unit !== "mm"){
-      const pxPerIN = 130, rangeIN = 6;
-      const width = marginL*2 + rangeIN*pxPerIN;
-      const valueIN = valueMM/MM_PER_IN;
+  const INK = "#161d24";
+  const HELP = "#1f9d63";
+  const sim = { p: null, api: null, raf: 0 };
 
-      let inTicks = "", inLabels = "";
-      const totalSixteenths = rangeIN*16;
-      const pxPerSixteenth = pxPerIN/16;
-      for(let s=0;s<=totalSixteenths;s++){
-        const x = marginL + s*pxPerSixteenth;
-        const isWhole = s%16===0, isHalf = s%8===0, isQuarter = s%4===0, isEighth = s%2===0;
-        const h = isWhole?30:(isHalf?22:(isQuarter?17:(isEighth?13:9)));
-        inTicks += `<line x1="${x}" y1="${y}" x2="${x}" y2="${y+h}" stroke="#dbe4ea" stroke-width="${isWhole?1.6:1}"/>`;
-        if(isWhole) inLabels += `<text x="${x}" y="${y-10}" font-family="IBM Plex Mono" font-size="13" fill="#8ea0b3" text-anchor="middle">${s/16}"</text>`;
-      }
-      const RES_IN = 1/128, N_IN = 8;
-      const zeroXin = marginL + valueIN*pxPerIN;
-      const stepsIN = Math.round(valueIN/RES_IN);
-      const n0in = ((stepsIN % N_IN) + N_IN) % N_IN;
-      const vernStepPxIN = (7/128)*pxPerIN;
-      let vernTicksIN = "", vernLabelsIN = "";
-      for(let i=0;i<=8;i++){
-        const x = zeroXin + i*vernStepPxIN;
-        const isMark = i%4===0;
-        const collidesWithCurrent = i!==n0in && Math.abs(i-n0in)<=1;
-        vernTicksIN += `<line x1="${x}" y1="${y+58}" x2="${x}" y2="${y+58-(isMark?24:15)}" stroke="#f2a900" stroke-width="${i===n0in?2.6:1.3}"/>`;
-        if((isMark && !collidesWithCurrent) || i===n0in) vernLabelsIN += `<text x="${x}" y="${y+78}" font-family="IBM Plex Mono" font-size="11" fill="${i===n0in?'#f2a900':'#8ea0b3'}" font-weight="${i===n0in?'700':'400'}" text-anchor="middle">${i}</text>`;
-      }
-      const helpIN = showHelp ? `<line x1="${zeroXin+n0in*vernStepPxIN}" y1="${y-34}" x2="${zeroXin+n0in*vernStepPxIN}" y2="${y+88}" stroke="#5fb488" stroke-width="1" stroke-dasharray="3,3"/>` : "";
-      const pieceW = valueIN*pxPerIN;
+  const SVG_DEFS = `<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+    <linearGradient id="g-steel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4f7f9"/><stop offset=".5" stop-color="#d3dbe0"/><stop offset="1" stop-color="#aeb9c1"/></linearGradient>
+    <linearGradient id="g-steel2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c4cdd4"/><stop offset=".5" stop-color="#a3afb8"/><stop offset="1" stop-color="#7d8a94"/></linearGradient>
+    <linearGradient id="g-jaw" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#b8c2c9"/><stop offset=".5" stop-color="#e4e9ec"/><stop offset="1" stop-color="#a9b4bc"/></linearGradient>
+    <linearGradient id="g-cyl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7c8993"/><stop offset=".28" stop-color="#f1f4f6"/><stop offset=".62" stop-color="#c2ccd3"/><stop offset="1" stop-color="#6d7a84"/></linearGradient>
+    <linearGradient id="g-cylH" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7c8993"/><stop offset=".3" stop-color="#f1f4f6"/><stop offset=".62" stop-color="#c2ccd3"/><stop offset="1" stop-color="#6d7a84"/></linearGradient>
+    <linearGradient id="g-cylDark" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a555e"/><stop offset=".3" stop-color="#b9c3ca"/><stop offset=".62" stop-color="#87939c"/><stop offset="1" stop-color="#3b454d"/></linearGradient>
+    <linearGradient id="g-frame" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5f7890"/><stop offset="1" stop-color="#36485a"/></linearGradient>
+    <linearGradient id="g-piece" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b9791a"/><stop offset=".3" stop-color="#f9d67a"/><stop offset=".65" stop-color="#e0a429"/><stop offset="1" stop-color="#9a6410"/></linearGradient>
+    <linearGradient id="g-bezel" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6f8f9"/><stop offset=".35" stop-color="#8f9ba5"/><stop offset=".6" stop-color="#e6ebee"/><stop offset="1" stop-color="#66737d"/></linearGradient>
+    <radialGradient id="g-face" cx=".45" cy=".4" r=".7"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e6eaed"/></radialGradient>
+    <linearGradient id="g-stone" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#55626e"/><stop offset="1" stop-color="#2b353f"/></linearGradient>
+    <pattern id="g-knurl" width="7" height="7" patternUnits="userSpaceOnUse"><path d="M0 0L7 7M7 0L0 7" stroke="#20282f" stroke-width="1" opacity=".55"/></pattern>
+    <pattern id="g-knurlV" width="5" height="8" patternUnits="userSpaceOnUse"><path d="M0 0V8" stroke="#20282f" stroke-width="1.4" opacity=".5"/></pattern>
+  </defs></svg>`;
 
-      return `<svg class="instrument-svg" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
-        <rect x="${marginL-4}" y="${y-44}" width="${pieceW+4}" height="30" fill="#3a4a58" opacity=".5" stroke="#33465a"/>
-        <text x="${marginL+pieceW/2}" y="${y-50}" font-family="IBM Plex Sans" font-size="11" fill="#8ea0b3" text-anchor="middle">pieza</text>
-        <text x="${marginL}" y="${y-30}" font-family="IBM Plex Sans" font-size="12.5" fill="#f2a900">escala en pulgadas (in)</text>
-        <line x1="${marginL}" y1="${y}" x2="${marginL+rangeIN*pxPerIN}" y2="${y}" stroke="#dbe4ea" stroke-width="1.6"/>
-        ${inTicks}${inLabels}
-        ${vernTicksIN}${vernLabelsIN}${helpIN}
-      </svg>`;
+  const n2 = v => Math.round(v*100)/100;
+  const txt = (x,y,s,size,o) => `<text x="${n2(x)}" y="${n2(y)}" font-family="IBM Plex Sans, Arial, sans-serif" font-size="${size}" font-weight="${(o&&o.w)||500}" fill="${(o&&o.fill)||INK}" text-anchor="${(o&&o.a)||"middle"}"${o&&o.op!=null?` opacity="${n2(o.op)}"`:""}>${s}</text>`;
+  const vline = (x,y1,y2,sw,color) => `<line x1="${n2(x)}" y1="${y1}" x2="${n2(x)}" y2="${y2}" stroke="${color||INK}" stroke-width="${sw}"/>`;
+  const el = id => document.getElementById(id);
+  const setAttr = (id,k,v) => { const e = el(id); if(e) e.setAttribute(k,v); };
+
+  // ===== Calibrador vernier =====
+  function buildVernier(target, unit, help){
+    const S = 4, X0 = 80, BY = 96, BH = 76, XS = X0+40, MAX = 150;
+    const Z = 36, LX0 = 150, LT = 64, LB = 236;       // lupa: px/mm, x del cero del nonio, bordes de la regla
+    const IN = MM_PER_IN;
+    if(sim.p === null) sim.p = Math.min(MAX, target + 28);
+    const inY = BY+14, mmY = BY+BH-14;
+
+    // --- vista general ---
+    let scale = "";
+    for(let mm=0; mm<=MAX; mm++){
+      const x = XS + mm*S, maj = mm%10===0, mid = mm%5===0;
+      scale += vline(x, mmY, mmY-(maj?15:(mid?11:7)), maj?1:.7);
+      if(maj) scale += txt(x+2.5, mmY-17, mm/10, 9.5, {a:"start"});
     }
-
-    const pxPerMM = 7, rangeMM = 150;
-    const width = marginL*2 + rangeMM*pxPerMM;
-    let mmTicks = "", mmLabels = "";
-    for(let mm=0; mm<=rangeMM; mm++){
-      const x = marginL + mm*pxPerMM;
-      const isMajor = mm%10===0, isMid = mm%5===0;
-      const h = isMajor?30:(isMid?22:13);
-      mmTicks += `<line x1="${x}" y1="${y}" x2="${x}" y2="${y+h}" stroke="#dbe4ea" stroke-width="${isMajor?1.6:1}"/>`;
-      if(isMajor) mmLabels += `<text x="${x}" y="${y-10}" font-family="IBM Plex Mono" font-size="13" fill="#8ea0b3" text-anchor="middle">${mm}</text>`;
+    for(let s=0; s<=96; s++){
+      const x = XS + s*IN/16*S, w = s%16===0, h = s%8===0, q = s%4===0;
+      scale += vline(x, inY, inY+(w?15:(h?11:(q?9:6))), w?1:.7);
+      if(w) scale += txt(x+2.5, inY+24, s/16, 9.5, {a:"start"});
     }
-    const RES_MM = 0.05, N_MM = 20; // 1mm / 20 = 0.05mm de resolución
-    const zeroXmm = marginL + valueMM*pxPerMM;
-    const stepsMM = Math.round(valueMM/RES_MM);
-    const n0mm = ((stepsMM % N_MM) + N_MM) % N_MM;
-    const vernStepPxMM = ((N_MM-1)/N_MM)*pxPerMM;
-    let vernTicksMM = "", vernLabelsMM = "";
-    for(let i=0;i<=N_MM;i++){
-      const x = zeroXmm + i*vernStepPxMM;
-      const isMark = i%5===0;
-      const collidesWithCurrent = i!==n0mm && Math.abs(i-n0mm)<=1;
-      vernTicksMM += `<line x1="${x}" y1="${y+58}" x2="${x}" y2="${y+58-(isMark?24:15)}" stroke="#f2a900" stroke-width="${i===n0mm?2.6:1.3}"/>`;
-      if((isMark && !collidesWithCurrent) || i===n0mm) vernLabelsMM += `<text x="${x}" y="${y+78}" font-family="IBM Plex Mono" font-size="11" fill="${i===n0mm?'#f2a900':'#8ea0b3'}" font-weight="${i===n0mm?'700':'400'}" text-anchor="middle">${i}</text>`;
-    }
-    const helpMM = showHelp ? `<line x1="${zeroXmm+n0mm*vernStepPxMM}" y1="${y-34}" x2="${zeroXmm+n0mm*vernStepPxMM}" y2="${y+88}" stroke="#5fb488" stroke-width="1" stroke-dasharray="3,3"/>` : "";
-    const pieceW = valueMM*pxPerMM;
+    let vern = "";
+    for(let i=0;i<=20;i++) vern += vline(XS+i*.95*S, mmY, mmY+(i%10===0?12:(i%2===0?9:6)), .7);
+    for(let i=0;i<=8;i++) vern += vline(XS+i*(7/128)*IN*S, inY, inY-(i%4===0?12:7), .7);
 
-    return `<svg class="instrument-svg" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
-      <rect x="${marginL-4}" y="${y-44}" width="${pieceW+4}" height="30" fill="#3a4a58" opacity=".5" stroke="#33465a"/>
-      <text x="${marginL+pieceW/2}" y="${y-50}" font-family="IBM Plex Sans" font-size="11" fill="#8ea0b3" text-anchor="middle">pieza</text>
-      <text x="${marginL}" y="${y-30}" font-family="IBM Plex Sans" font-size="12.5" fill="#f2a900">escala métrica (mm)</text>
-      <line x1="${marginL}" y1="${y}" x2="${marginL+rangeMM*pxPerMM}" y2="${y}" stroke="#dbe4ea" stroke-width="1.6"/>
-      ${mmTicks}${mmLabels}
-      ${vernTicksMM}${vernLabelsMM}${helpMM}
+    const jawTip = BY+BH+160;
+    const overview = `<svg class="instrument-svg sim-ov" id="simOv" viewBox="0 0 1000 350" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Calibrador vernier: arrastra la corredera hasta que las mordazas toquen la pieza">
+      <rect x="${X0}" y="${BY+BH+82}" width="${n2(target*S)}" height="66" rx="3" fill="url(#g-piece)" stroke="#7a4f0c"/>
+      ${target*S>34?txt(X0+target*S/2, BY+BH+119, "pieza", 13, {fill:"#4d3206", w:600}):""}
+      <polygon points="${X0-30},${BY} ${X0},${BY} ${X0},${BY-62} ${X0-7},${BY-62} ${X0-30},${BY-20}" fill="url(#g-jaw)" stroke="#5b6771"/>
+      <rect x="${X0}" y="${BY}" width="860" height="${BH}" rx="2" fill="url(#g-steel)" stroke="#5b6771"/>
+      <polygon points="${X0-66},${BY} ${X0},${BY} ${X0},${jawTip} ${X0-12},${jawTip} ${X0-66},${BY+BH+52}" fill="url(#g-jaw)" stroke="#5b6771"/>
+      ${scale}
+      ${txt(XS+610, BY+BH/2+4, "mm", 10, {fill:"#56626c"})}
+      <g id="vSlider" style="cursor:grab">
+        <polygon points="${X0},${BY+2} ${X0},${BY-62} ${X0+7},${BY-62} ${X0+30},${BY-20} ${X0+30},${BY+2}" fill="url(#g-jaw)" stroke="#5b6771"/>
+        <polygon points="${X0},${BY+BH} ${X0},${jawTip} ${X0+12},${jawTip} ${X0+66},${BY+BH+52} ${X0+66},${BY+BH}" fill="url(#g-jaw)" stroke="#5b6771"/>
+        <path fill-rule="evenodd" d="M${X0} ${BY-12}h250v${BH+24}h-250z M${X0+30} ${inY}v${BH-28}h112v-${BH-28}z" fill="url(#g-steel2)" stroke="#4d5861"/>
+        <rect x="${X0+30}" y="${BY-7}" width="112" height="21" fill="url(#g-steel)" stroke="#5b6771" stroke-width=".6"/>
+        <rect x="${X0+30}" y="${mmY}" width="112" height="21" fill="url(#g-steel)" stroke="#5b6771" stroke-width=".6"/>
+        ${vern}
+        <rect x="${X0+168}" y="${BY-28}" width="22" height="17" rx="3" fill="url(#g-cylDark)" stroke="#333c44"/><rect x="${X0+168}" y="${BY-28}" width="22" height="17" rx="3" fill="url(#g-knurlV)"/>
+        <circle cx="${X0+182}" cy="${BY+BH+20}" r="15" fill="url(#g-cylDark)" stroke="#333c44"/><circle cx="${X0+182}" cy="${BY+BH+20}" r="15" fill="url(#g-knurl)"/>
+        <rect x="${X0-10}" y="${BY-70}" width="270" height="${jawTip-BY+80}" fill="transparent"/>
+      </g>
+      <g id="vHint" fill="#f2a900" opacity=".9"><path d="M0 0l16 -9v6h46v6h-46v6z"/></g>
     </svg>`;
+
+    // --- lupa ---
+    let lm = "";
+    for(let mm=0; mm<=MAX; mm++){
+      const x = mm*Z, maj = mm%10===0, mid = mm%5===0;
+      lm += vline(x, LB, LB-(maj?50:(mid?40:28)), maj?2.4:1.8);
+      if(maj) lm += txt(x+7, LB-58, mm, 26, {a:"start", w:600});
+    }
+    for(let s=0; s<=96; s++){
+      const x = s*IN/16*Z, w = s%16===0, h = s%8===0, q = s%4===0, e8 = s%2===0;
+      lm += vline(x, LT, LT+(w?50:(h?42:(q?34:(e8?27:19)))), w?2.4:1.8);
+      if(w) lm += txt(x+7, LT+76, s/16, 26, {a:"start", w:600});
+    }
+    let lv = "";
+    for(let i=0;i<=20;i++){
+      const x = LX0 + i*.95*Z;
+      lv += vline(x, LB, LB+(i%2===0?30:19), 1.8);
+      if(i%2===0) lv += txt(x, LB+52, i/2, 17, {w:600});
+    }
+    for(let i=0;i<=8;i++){
+      const x = LX0 + i*(7/128)*IN*Z;
+      lv += vline(x, LT, LT-(i%4===0?30:19), 1.8);
+      if(i%4===0) lv += txt(x, LT-37, i, 17, {w:600});
+    }
+    const lupa = `<div class="lupa"><div class="lupa-tag">Lupa · zona de lectura (arriba pulgadas, abajo milímetros)<span class="lupa-swipe"> · desliza la lupa para ver todo el nonio</span></div>
+      <div class="lupa-scroll" id="simLupaScroll"><svg class="instrument-svg lupa-svg lupa-wide" id="simLupa" viewBox="0 0 1000 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ampliación de la escala principal y el nonio">
+        <defs><clipPath id="vClip"><rect x="0" y="${LT}" width="1000" height="${LB-LT}"/></clipPath></defs>
+        <rect x="0" y="0" width="1000" height="300" fill="url(#g-steel2)"/>
+        <rect x="0" y="${LT}" width="1000" height="${LB-LT}" fill="url(#g-steel)"/>
+        <g clip-path="url(#vClip)"><g id="vLupaBeam">${lm}</g></g>
+        <line x1="0" y1="${LT}" x2="1000" y2="${LT}" stroke="#4d5861" stroke-width="1.2"/><line x1="0" y1="${LB}" x2="1000" y2="${LB}" stroke="#4d5861" stroke-width="1.2"/>
+        ${lv}
+        ${txt(960, LT-37, "1/128 in", 15, {a:"end", fill:"#27313a"})}${txt(960, LB+52, "0.05 mm", 15, {a:"end", fill:"#27313a"})}
+        <line id="vHelp" x1="0" x2="0" y1="0" y2="0" stroke="${HELP}" stroke-width="2.4" stroke-dasharray="7,5" style="display:none"/>
+      </svg></div></div>`;
+
+    function update(){
+      const p = sim.p;
+      setAttr("vSlider", "transform", `translate(${n2(p*S)},0)`);
+      setAttr("vLupaBeam", "transform", `translate(${n2(LX0 - p*Z)},0)`);
+      const hint = el("vHint");
+      if(hint){ hint.setAttribute("transform", `translate(${n2(X0+p*S+80)},${BY+BH+150})`); hint.style.display = seated() ? "none" : ""; }
+      const h = el("vHelp");
+      if(h){
+        if(!help){ h.style.display = "none"; }
+        else if(unit === "mm"){
+          const n = ((Math.round(p/.05) % 20) + 20) % 20, x = LX0 + n*.95*Z;
+          h.setAttribute("x1", x); h.setAttribute("x2", x); h.setAttribute("y1", LB-56); h.setAttribute("y2", LB+34); h.style.display = "";
+        } else {
+          const n = ((Math.round(p/IN*128) % 8) + 8) % 8, x = LX0 + n*(7/128)*IN*Z;
+          h.setAttribute("x1", x); h.setAttribute("x2", x); h.setAttribute("y1", LT-34); h.setAttribute("y2", LT+56); h.style.display = "";
+        }
+      }
+    }
+    const seated = () => sim.p - target < 1e-7;
+    return {
+      html: overview + lupa, update, seated, touch: "pan-y",
+      drag(dx){ sim.p = Math.min(MAX, Math.max(target, sim.p + dx/S)); },
+      closeTo: target, openTo: Math.min(MAX, target + 28),
+      labels: { close: "Cerrar las mordazas sobre la pieza", open: "Abrir",
+        open_msg: "Mordazas abiertas: arrastra la corredera hacia la izquierda hasta que tope con la pieza.",
+        seated_msg: "Mordazas en contacto con la pieza: toma tu lectura en la lupa." }
+    };
   }
 
-  // ---------- SVG: micrómetro (una cara por unidad) ----------
-
-  function micrometerFace(value, o){
-    const marginL = 28, marginT = 28;
-    const width = marginL*2 + o.rangeMax*o.pxPerUnit + 230;
-    const height = 210;
-    const sleeveSteps = Math.floor(value*o.stepsPerUnit + 1e-9);
-    let sleeveReading = sleeveSteps/o.stepsPerUnit;
-    let thimbleReading = Math.round((value - sleeveReading)*o.thimbleMultiplier);
-    if(thimbleReading >= o.thimbleDivisions){ sleeveReading += 1/o.stepsPerUnit; thimbleReading = 0; }
-
-    let ticks = "", labels = "";
-    const totalMinor = Math.round(o.rangeMax*o.stepsPerUnit);
-    for(let k=0;k<=totalMinor;k++){
-      const u = k/o.stepsPerUnit, x = marginL + u*o.pxPerUnit;
-      const isMajor = k % o.majorEveryK === 0;
-      const h = isMajor?20:12;
-      ticks += `<line x1="${x}" y1="${marginT}" x2="${x}" y2="${marginT+h}" stroke="#dbe4ea" stroke-width="${isMajor?1.3:1}"/>`;
-      if(isMajor) labels += `<text x="${x}" y="${marginT-6}" font-family="IBM Plex Mono" font-size="9.5" fill="#8ea0b3" text-anchor="middle">${o.majorLabel(u)}</text>`;
+  // ===== Micrómetro =====
+  function thimbleMarks(xe, yc, R, reading, div, o){
+    let s = "";
+    for(let i=0;i<div;i++){
+      let d = i - reading; d -= div*Math.round(d/div);
+      const th = d/div*2*Math.PI;
+      if(Math.abs(th) > 1.38) continue;
+      const y = yc - R*Math.sin(th), op = Math.max(.3, Math.cos(th)), maj = i%5===0;
+      s += `<line x1="${xe+o.x0}" y1="${n2(y)}" x2="${xe+o.x0+(maj?o.lenMaj:o.len)}" y2="${n2(y)}" stroke="${INK}" stroke-width="${o.sw}" opacity="${n2(op)}"/>`;
+      if(maj && o.font) s += txt(xe+o.numX, y+o.font*.36, i, o.font, {a:"start", w:600, op});
     }
-    const sleeveX = marginL + sleeveReading*o.pxPerUnit;
-    const thimbleEdge = `<rect x="${sleeveX}" y="${marginT-4}" width="${o.rangeMax*o.pxPerUnit}" height="26" fill="#3a4a58" opacity=".9"/>
-      <line x1="${sleeveX}" y1="${marginT-4}" x2="${sleeveX}" y2="${marginT+22}" stroke="#f2a900" stroke-width="2"/>`;
-
-    const cx = marginL + o.rangeMax*o.pxPerUnit + 112, cy = marginT + 78, r = 68;
-    const angleOffset = -(thimbleReading/o.thimbleDivisions)*360;
-    let dialTicks = "";
-    for(let i=0;i<o.thimbleDivisions;i++){
-      const ang = (i/o.thimbleDivisions)*360 + angleOffset - 90, rad = ang*Math.PI/180;
-      const isMark = i%5===0;
-      const rr1 = r, rr2 = isMark? r-11 : r-6;
-      const x1c = cx+rr1*Math.cos(rad), y1c = cy+rr1*Math.sin(rad);
-      const x2c = cx+rr2*Math.cos(rad), y2c = cy+rr2*Math.sin(rad);
-      dialTicks += `<line x1="${x1c}" y1="${y1c}" x2="${x2c}" y2="${y2c}" stroke="${i===0?'#f2a900':'#dbe4ea'}" stroke-width="${i===0?2.2:1}"/>`;
-      if(isMark){
-        const lx = cx+(r-21)*Math.cos(rad), ly = cy+(r-21)*Math.sin(rad);
-        dialTicks += `<text x="${lx}" y="${ly+3}" font-family="IBM Plex Mono" font-size="8.5" fill="#8ea0b3" text-anchor="middle">${i}</text>`;
-      }
-    }
-    const help = o.showHelp ? `<circle cx="${cx}" cy="${cy}" r="${r+6}" fill="none" stroke="#5fb488" stroke-width="1" stroke-dasharray="4,3"/>` : "";
-
-    return `<svg class="instrument-svg" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
-      <line x1="${marginL}" y1="${marginT}" x2="${marginL+o.rangeMax*o.pxPerUnit}" y2="${marginT}" stroke="#dbe4ea" stroke-width="1.3"/>
-      ${ticks}${labels}
-      ${thimbleEdge}
-      <circle cx="${cx}" cy="${cy}" r="${r+14}" fill="#1f2e3d" stroke="#33465a"/>
-      ${dialTicks}
-      <line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy-r+8}" stroke="#f2a900" stroke-width="2"/>
-      <circle cx="${cx}" cy="${cy}" r="3.2" fill="#f2a900"/>
-      <text x="${cx}" y="${cy+r+28}" font-family="IBM Plex Sans" font-size="10" fill="#8ea0b3" text-anchor="middle">tambor</text>
-      <text x="${marginL+o.rangeMax*o.pxPerUnit/2}" y="${marginT+46}" font-family="IBM Plex Sans" font-size="10" fill="#8ea0b3" text-anchor="middle">manguito (${o.unitLabel})</text>
-      ${help}
-    </svg>`;
+    return s;
   }
 
-  function renderMicrometerSingle(valueMM, showHelp, unit){
-    if(unit !== "mm"){
-      const valueIN = valueMM/MM_PER_IN;
-      return micrometerFace(valueIN, {
-        rangeMax: 1, pxPerUnit: 380, stepsPerUnit: 40, majorEveryK: 4,
-        thimbleDivisions: 25, thimbleMultiplier: 1000,
-        unitLabel: "in", majorLabel: u => u.toFixed(1), showHelp
-      });
+  function buildMicrometer(target, unit, help){
+    const isMM = unit === "mm", IN = MM_PER_IN;
+    const pitch = isMM ? .5 : .025*IN, div = isMM ? 50 : 25;     // avance por vuelta (mm) y divisiones del tambor
+    const S = 8, AY = 150, XA = 150, XR = XA + 25*S + 30, XS0 = XR + 90, MAX = 25;
+    const Z = 30, LX = 340, YC = 160, RL = 114;
+    if(sim.p === null) sim.p = Math.min(MAX, target + 5.2);
+    const reading = p => ((((p % pitch) + pitch) % pitch) / pitch) * div;
+
+    // --- vista general ---
+    let sl = `<line x1="${XS0-6}" y1="${AY}" x2="${XS0+25*S+8}" y2="${AY}" stroke="${INK}" stroke-width=".9"/>`;
+    if(isMM){
+      for(let k=0;k<=50;k++){ const x = XS0 + k*.5*S; sl += k%2===0 ? vline(x, AY, AY-(k%10===0?11:7), .7) : vline(x, AY, AY+6, .7); if(k%10===0) sl += txt(x, AY-13, k/2, 8.5); }
+    } else {
+      for(let k=0;k<=39;k++){ const x = XS0 + k*.025*IN*S; sl += vline(x, AY, AY-(k%4===0?11:6), .7); if(k%4===0) sl += txt(x, AY-13, k/4, 8.5); }
     }
-    return micrometerFace(valueMM, {
-      rangeMax: 25, pxPerUnit: 20, stepsPerUnit: 2, majorEveryK: 10,
-      thimbleDivisions: 50, thimbleMultiplier: 100,
-      unitLabel: "mm", majorLabel: u => Math.round(u), showHelp
+    const overview = `<svg class="instrument-svg sim-ov" id="simOv" viewBox="0 0 1000 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Micrómetro de exteriores: gira el tambor hasta que el husillo toque la pieza">
+      <path d="M${XA-64} ${AY-38} L${XA-10} ${AY-38} L${XA-10} ${AY+44} A${(XR-XA+10)/2} 104 0 0 0 ${XR} ${AY+44} L${XR} ${AY-38} L${XR+64} ${AY-38} L${XR+64} ${AY+62} A${(XR-XA+128)/2} 172 0 0 1 ${XA-64} ${AY+62} Z" fill="url(#g-frame)" stroke="#22303c" stroke-width="1.5"/>
+      <rect x="${(XA+XR)/2-70}" y="${AY+164}" width="140" height="40" rx="5" fill="#e9edf0" stroke="#22303c"/>
+      ${txt((XA+XR)/2, AY+181, isMM?"0 – 25 mm":"0 – 1 in", 13, {w:600})}${txt((XA+XR)/2, AY+197, isMM?"0.01 mm":"0.001 in", 12)}
+      <rect x="${XA}" y="${AY-40}" width="${n2(target*S)}" height="80" rx="4" fill="url(#g-piece)" stroke="#7a4f0c"/>
+      ${target*S>40?txt(XA+target*S/2, AY+58, "pieza", 13, {fill:"#f2a900", w:600}):""}
+      <rect x="${XA-12}" y="${AY-11}" width="12" height="22" fill="url(#g-cyl)" stroke="#4d5861"/>
+      <rect id="mSpindle" x="${XA}" y="${AY-11}" width="10" height="22" fill="url(#g-cyl)" stroke="#4d5861"/>
+      <rect x="${XR+20}" y="${AY-52}" width="24" height="16" rx="3" fill="url(#g-cylDark)" stroke="#22303c"/><rect x="${XR+20}" y="${AY-52}" width="24" height="16" rx="3" fill="url(#g-knurlV)"/>
+      <rect x="${XR+64}" y="${AY-24}" width="${XS0-XR-64+25*S+14}" height="48" fill="url(#g-cyl)" stroke="#4d5861"/>
+      ${sl}
+      <g id="mThimble" style="cursor:grab">
+        <polygon points="${XS0},${AY-26} ${XS0+22},${AY-37} ${XS0+22},${AY+37} ${XS0},${AY+26}" fill="url(#g-cyl)" stroke="#4d5861"/>
+        <g id="mOvMarks"></g>
+        <rect x="${XS0+22}" y="${AY-37}" width="196" height="74" fill="url(#g-cylDark)" stroke="#333c44"/>
+        <rect x="${XS0+70}" y="${AY-37}" width="148" height="74" fill="url(#g-knurl)"/>
+        <rect x="${XS0+218}" y="${AY-17}" width="44" height="34" rx="3" fill="url(#g-cylDark)" stroke="#333c44"/><rect x="${XS0+218}" y="${AY-17}" width="44" height="34" rx="3" fill="url(#g-knurlV)"/>
+        <rect x="${XS0-4}" y="${AY-70}" width="280" height="140" fill="transparent"/>
+      </g>
+      ${txt(XA-37, AY-48, "yunque", 11, {fill:"#8ea0b3"})}${txt(XS0+120, AY+62, "tambor", 11, {fill:"#8ea0b3"})}${txt(XS0+240, AY+40, "trinquete", 11, {fill:"#8ea0b3"})}
+      <g id="mHint" fill="#f2a900" opacity=".9"><path d="M0 0l16 -9v6h46v6h-46v6z"/></g>
+    </svg>`;
+
+    // --- lupa ---
+    let ls = "";
+    if(isMM){
+      for(let k=0;k<=50;k++){
+        const x = k*.5*Z;
+        if(k%2===0){ ls += vline(x, YC, YC-(k%10===0?46:32), 2.2); if(k%10===0) ls += txt(x, YC-56, k/2, 24, {w:600}); }
+        else ls += vline(x, YC, YC+28, 2.2);
+      }
+    } else {
+      for(let k=0;k<=39;k++){
+        const x = k*.025*IN*Z;
+        ls += vline(x, YC, YC-(k%4===0?46:28), 2.2);
+        if(k%4===0) ls += txt(x, YC-56, k/4, 24, {w:600});
+      }
+    }
+    const lupa = `<div class="lupa"><div class="lupa-tag">Lupa · manguito y tambor (${isMM?"mm":"in"})</div>
+      <svg class="instrument-svg lupa-svg" id="simLupa" viewBox="0 0 640 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ampliación del manguito y el tambor">
+        <defs><clipPath id="mClip"><rect x="0" y="0" width="${LX+1.6}" height="320"/></clipPath></defs>
+        <rect x="0" y="62" width="${LX+4}" height="196" fill="url(#g-cyl)"/>
+        <g clip-path="url(#mClip)"><line x1="0" y1="${YC}" x2="${LX}" y2="${YC}" stroke="${INK}" stroke-width="2.2"/><g id="mLupaSleeve">${ls}</g></g>
+        <polygon points="${LX},46 ${LX+70},18 ${LX+70},302 ${LX},274" fill="url(#g-cyl)" stroke="#4d5861"/>
+        <g id="mLupaMarks"></g>
+        <rect x="${LX+70}" y="18" width="${640-LX-70}" height="284" fill="url(#g-cylDark)"/><rect x="${LX+150}" y="18" width="${640-LX-150}" height="284" fill="url(#g-knurl)"/>
+        <line id="mHelp" x1="${LX-150}" y1="${YC}" x2="${LX+70}" y2="${YC}" stroke="${HELP}" stroke-width="2.6" stroke-dasharray="8,5" style="display:none"/>
+      </svg></div>`;
+
+    const seated = () => sim.p - target < 1e-7;
+    function update(){
+      const p = sim.p, r = reading(p);
+      setAttr("mSpindle", "x", n2(XA + p*S)); setAttr("mSpindle", "width", n2(XR - XA - p*S + 12));
+      setAttr("mThimble", "transform", `translate(${n2(p*S)},0)`);
+      const om = el("mOvMarks"); if(om) om.innerHTML = thimbleMarks(XS0, AY, 30, r, div, {x0:1.5, len:8, lenMaj:13, sw:.7});
+      setAttr("mLupaSleeve", "transform", `translate(${n2(LX - p*Z)},0)`);
+      const lm = el("mLupaMarks"); if(lm) lm.innerHTML = thimbleMarks(LX, YC, RL, r, div, {x0:3, len:24, lenMaj:38, sw:2, font:22, numX:46});
+      const h = el("mHelp"); if(h) h.style.display = help ? "" : "none";
+      const hint = el("mHint"); if(hint){ hint.setAttribute("transform", `translate(${n2(XS0+p*S+70)},${AY-58})`); hint.style.display = seated() ? "none" : ""; }
+    }
+    return {
+      html: overview + lupa, update, seated, touch: "none",
+      drag(dx, dyPx, axis){
+        const d = axis === "y" ? (dyPx/9)*(pitch/div) : dx/S;
+        sim.p = Math.min(MAX, Math.max(target, sim.p + d));
+      },
+      lupaDrag(dx, dyPx, axis){
+        const d = axis === "y" ? (dyPx/9)*(pitch/div) : dx/Z;
+        sim.p = Math.min(MAX, Math.max(target, sim.p + d));
+      },
+      closeTo: target, openTo: Math.min(MAX, target + 5.2),
+      labels: { close: "Girar el tambor hasta el contacto", open: "Abrir",
+        open_msg: "Husillo abierto: arrastra el tambor hacia la izquierda (avance rápido) o hacia arriba y abajo (giro fino) hasta que el husillo toque la pieza.",
+        seated_msg: "Clic del trinquete: el husillo tocó la pieza. Toma tu lectura en la lupa." }
+    };
+  }
+
+  // ===== Comparador de carátula =====
+  function buildComparador(target, unit, help){
+    const isMM = unit === "mm", IN = MM_PER_IN;
+    const perRev = isMM ? 1 : .1*IN;                  // mm de carrera por vuelta de la aguja grande
+    const S = 6, CX = 350, CY = 250, R = 150, TY = 590, L = 54, BW = 176;
+    const BX_OUT = CX + 78, BX_IN = CX - 112;
+    if(sim.p === null) sim.p = BX_OUT;
+    const disp = bx => target * Math.min(1, Math.max(0, (CX - bx)/L));    // carrera del husillo (mm)
+
+    let face = "";
+    for(let i=0;i<100;i++){
+      const a = (i/100)*2*Math.PI - Math.PI/2, c = Math.cos(a), s = Math.sin(a);
+      const r2 = i%10===0 ? 108 : (i%5===0 ? 114 : 120);
+      face += `<line x1="${n2(CX+130*c)}" y1="${n2(CY+130*s)}" x2="${n2(CX+r2*c)}" y2="${n2(CY+r2*s)}" stroke="${INK}" stroke-width="${i%10===0?2.2:1.2}"/>`;
+      if(i%10===0) face += txt(CX+90*c, CY+90*s+6.5, i, 19, {w:600});
+    }
+    const SCY = CY + 56, SR = 34;
+    let sub = `<circle cx="${CX}" cy="${SCY}" r="${SR}" fill="none" stroke="${INK}" stroke-width="1"/>`;
+    for(let i=0;i<10;i++){
+      const a = (i/10)*2*Math.PI - Math.PI/2, c = Math.cos(a), s = Math.sin(a);
+      sub += `<line x1="${n2(CX+SR*c)}" y1="${n2(SCY+SR*s)}" x2="${n2(CX+(SR-6)*c)}" y2="${n2(SCY+(SR-6)*s)}" stroke="${INK}" stroke-width="1.2"/>`;
+      sub += txt(CX+(SR-15)*c, SCY+(SR-15)*s+4, i, 11.5, {w:600});
+    }
+    const ht = target*S;
+    const svg = `<svg class="instrument-svg sim-ov sim-dial" id="simOv" viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Comparador de carátula en su soporte: desliza la pieza bajo el palpador">
+      <rect x="0" y="${TY}" width="640" height="50" fill="url(#g-stone)"/><line x1="0" y1="${TY}" x2="640" y2="${TY}" stroke="#8ea0b3" stroke-width="1.5"/>
+      ${txt(20, TY+30, "mesa de referencia", 13, {a:"start", fill:"#8ea0b3"})}
+      <rect x="22" y="${TY-30}" width="170" height="30" rx="4" fill="url(#g-frame)" stroke="#22303c"/>
+      <rect x="68" y="60" width="20" height="${TY-90}" fill="url(#g-cylH)" stroke="#4d5861"/>
+      <rect x="78" y="${CY-9}" width="150" height="18" fill="url(#g-cyl)" stroke="#4d5861"/>
+      <rect x="56" y="${CY-22}" width="44" height="44" rx="5" fill="url(#g-frame)" stroke="#22303c"/><circle cx="78" cy="${CY}" r="8" fill="url(#g-cylDark)" stroke="#22303c"/>
+      <g id="cBlock" style="cursor:grab">
+        <polygon points="0,${TY} ${L},${n2(TY-ht)} ${BW},${n2(TY-ht)} ${BW},${TY}" fill="url(#g-piece)" stroke="#7a4f0c"/>
+        ${txt(BW-26, TY-ht-9, "pieza", 13, {fill:"#f2a900", w:600})}
+        <rect x="-10" y="${TY-ht-44}" width="${BW+20}" height="${ht+60}" fill="transparent"/>
+      </g>
+      <g id="cPlunger">
+        <rect x="${CX-6}" y="${CY+R+70}" width="12" height="${TY-(CY+R+70)-12}" fill="url(#g-cylH)" stroke="#4d5861"/>
+        <path d="M${CX-7} ${TY-14} h14 l-2 8 a5.5 5.5 0 0 1 -10 0z" fill="#3a444c" stroke="#22303c"/>
+        <rect x="${CX-8}" y="${CY-R-36}" width="16" height="40" fill="url(#g-cylH)" stroke="#4d5861"/><rect x="${CX-12}" y="${CY-R-44}" width="24" height="12" rx="3" fill="url(#g-cylDark)" stroke="#22303c"/>
+      </g>
+      <rect x="${CX-14}" y="${CY+R-6}" width="28" height="112" fill="url(#g-cylH)" stroke="#4d5861"/>
+      <rect x="${CX-17}" y="${CY-R-8}" width="34" height="14" rx="3" fill="url(#g-cylH)" stroke="#4d5861"/>
+      <circle cx="${CX}" cy="${CY}" r="${R}" fill="url(#g-bezel)" stroke="#39434b" stroke-width="1.5"/>
+      <circle cx="${CX}" cy="${CY}" r="${R-14}" fill="url(#g-face)" stroke="#39434b"/>
+      ${face}${sub}
+      ${txt(CX, CY-44, isMM?"0.01 mm":"0.001 in", 15, {w:600})}${txt(CX, CY-26, isMM?"0 – 10 mm":"0 – 1 in", 11, {fill:"#56626c"})}
+      <line id="cHelp" x1="${CX}" y1="${CY}" x2="${CX}" y2="${CY-134}" stroke="${HELP}" stroke-width="2.2" stroke-dasharray="6,4" style="display:none"/>
+      <line id="cSub" x1="${CX}" y1="${SCY+5}" x2="${CX}" y2="${SCY-SR+7}" stroke="${INK}" stroke-width="2"/><circle cx="${CX}" cy="${SCY}" r="3" fill="${INK}"/>
+      <g id="cNeedle"><path d="M${CX-2.6} ${CY+26} L${CX+2.6} ${CY+26} L${CX+.7} ${CY-122} L${CX-.7} ${CY-122}Z" fill="#b3261e" stroke="#7d1a14" stroke-width=".5"/></g>
+      <circle cx="${CX}" cy="${CY}" r="8" fill="url(#g-cylDark)" stroke="#22303c"/>
+      <g id="cHint" fill="#f2a900" opacity=".9"><path d="M0 0l16 -9v6h46v6h-46v6z"/></g>
+    </svg>`;
+
+    const seated = () => CX - sim.p >= L - 1e-7;
+    function update(){
+      const bx = sim.p, d = disp(bx), rev = d/perRev;
+      setAttr("cBlock", "transform", `translate(${n2(bx)},0)`);
+      setAttr("cPlunger", "transform", `translate(0,${n2(-d*S)})`);
+      setAttr("cNeedle", "transform", `rotate(${n2((rev % 1)*360)} ${CX} ${CY})`);
+      setAttr("cSub", "transform", `rotate(${n2((rev/10)*360)} ${CX} ${SCY})`);
+      const h = el("cHelp"); if(h){ h.style.display = help ? "" : "none"; h.setAttribute("transform", `rotate(${n2((rev % 1)*360)} ${CX} ${CY})`); }
+      const hint = el("cHint"); if(hint){ hint.setAttribute("transform", `translate(${n2(bx+BW-62)},${TY+26})`); hint.style.display = seated() ? "none" : ""; }
+    }
+    return {
+      html: svg, update, seated, touch: "pan-y",
+      drag(dx){ sim.p = Math.min(BX_OUT, Math.max(BX_IN, sim.p + dx)); },
+      closeTo: BX_IN, openTo: BX_OUT, slow: true,
+      labels: { close: "Colocar la pieza bajo el palpador", open: "Retirar la pieza",
+        open_msg: "El palpador descansa sobre la mesa y el comparador marca cero. Desliza la pieza hacia la izquierda hasta que quede bajo el palpador.",
+        seated_msg: "La pieza levantó la varilla del palpador: toma tu lectura en la carátula." }
+    };
+  }
+
+  // ===== montaje, arrastre y botones =====
+  function simStatus(){
+    const a = sim.api; if(!a) return;
+    const s = el("simStatus"); if(!s) return;
+    const ok = a.seated();
+    s.textContent = ok ? a.labels.seated_msg : a.labels.open_msg;
+    s.classList.toggle("ok", ok);
+  }
+  function simRefresh(){ if(sim.api){ sim.api.update(); simStatus(); } }
+
+  function simAnimate(to){
+    cancelAnimationFrame(sim.raf);
+    const from = sim.p, t0 = performance.now(), dur = sim.api.slow ? 1100 : 550;
+    const step = now => {
+      const k = Math.min(1, (now - t0)/dur), e = k<.5 ? 2*k*k : 1 - Math.pow(-2*k+2, 2)/2;
+      sim.p = k >= 1 ? to : from + (to - from)*e;
+      simRefresh();
+      if(k < 1) sim.raf = requestAnimationFrame(step);
+    };
+    sim.raf = requestAnimationFrame(step);
+  }
+
+  function bindDrag(svg, fn){
+    if(!svg) return;
+    let last = null, axis = null, start = null;
+    svg.style.touchAction = sim.api.touch;
+    svg.addEventListener("pointerdown", e => {
+      cancelAnimationFrame(sim.raf);
+      last = { x: e.clientX, y: e.clientY }; start = last; axis = null;
+      try{ svg.setPointerCapture(e.pointerId); }catch(err){ /* sin captura: el arrastre sigue funcionando dentro del dibujo */ }
     });
-  }
-
-  // ---------- SVG: comparador de carátula (una cara por unidad) ----------
-
-  function comparadorFace(value, o){
-    const width = 320, height = 242;
-    const cx = width/2, cy = 112, r = o.r;
-    const mainPos = ((Math.round(value/o.resolutionPerDiv) % o.mainDivisions) + o.mainDivisions) % o.mainDivisions;
-    const revolution = Math.floor(value/o.unitPerRev + 1e-9);
-    const mainAngle = (mainPos/o.mainDivisions)*360 - 90;
-    let dialTicks = "";
-    for(let i=0;i<o.mainDivisions;i++){
-      const ang = (i/o.mainDivisions)*360 - 90, rad = ang*Math.PI/180;
-      const isMark = i%10===0;
-      const rr1 = r, rr2 = isMark? r-13 : (i%5===0? r-9 : r-5);
-      const x1c = cx+rr1*Math.cos(rad), y1c = cy+rr1*Math.sin(rad);
-      const x2c = cx+rr2*Math.cos(rad), y2c = cy+rr2*Math.sin(rad);
-      dialTicks += `<line x1="${x1c}" y1="${y1c}" x2="${x2c}" y2="${y2c}" stroke="#dbe4ea" stroke-width="${isMark?1.5:1}"/>`;
-      if(isMark){
-        const lx = cx+(r-24)*Math.cos(rad), ly = cy+(r-24)*Math.sin(rad);
-        dialTicks += `<text x="${lx}" y="${ly+3}" font-family="IBM Plex Mono" font-size="9.5" fill="#8ea0b3" text-anchor="middle">${i}</text>`;
+    svg.addEventListener("pointermove", e => {
+      if(!last) return;
+      const r = svg.getBoundingClientRect(), k = svg.viewBox.baseVal.width / r.width;
+      if(!axis){
+        const ax = Math.abs(e.clientX - start.x), ay = Math.abs(e.clientY - start.y);
+        if(ax < 5 && ay < 5) return;
+        axis = ay > ax ? "y" : "x";
+        last = { x: e.clientX, y: e.clientY };
+        return;
       }
-    }
-    const scx = cx, scy = cy+34, sr = 23;
-    let subTicks = "";
-    for(let i=0;i<o.subCount;i++){
-      const ang = (i/o.subCount)*360 - 90, rad = ang*Math.PI/180;
-      const x1c = scx+sr*Math.cos(rad), y1c = scy+sr*Math.sin(rad);
-      const x2c = scx+(sr-6)*Math.cos(rad), y2c = scy+(sr-6)*Math.sin(rad);
-      subTicks += `<line x1="${x1c}" y1="${y1c}" x2="${x2c}" y2="${y2c}" stroke="#dbe4ea" stroke-width="1"/>`;
-      subTicks += `<text x="${scx+(sr-13)*Math.cos(rad)}" y="${scy+(sr-13)*Math.sin(rad)+3}" font-family="IBM Plex Mono" font-size="7" fill="#8ea0b3" text-anchor="middle">${i}</text>`;
-    }
-    const subAngle = ((((revolution % o.subCount)+o.subCount)%o.subCount)/o.subCount)*360 - 90;
-    const help = o.showHelp ? `<circle cx="${cx}" cy="${cy}" r="${r+8}" fill="none" stroke="#5fb488" stroke-width="1" stroke-dasharray="4,3"/>` : "";
-
-    return `<svg class="instrument-svg" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="${cx}" cy="${cy}" r="${r+16}" fill="#243546" stroke="#33465a"/>
-      ${dialTicks}
-      <circle cx="${scx}" cy="${scy}" r="${sr+6}" fill="#1f2e3d" stroke="#33465a"/>
-      ${subTicks}
-      <line x1="${scx}" y1="${scy}" x2="${scx+(sr-7)*Math.cos(subAngle*Math.PI/180)}" y2="${scy+(sr-7)*Math.sin(subAngle*Math.PI/180)}" stroke="#f2a900" stroke-width="1.6"/>
-      <line x1="${cx}" y1="${cy}" x2="${cx+(r-13)*Math.cos(mainAngle*Math.PI/180)}" y2="${cy+(r-13)*Math.sin(mainAngle*Math.PI/180)}" stroke="#f2a900" stroke-width="2.3"/>
-      <circle cx="${cx}" cy="${cy}" r="3.6" fill="#f2a900"/>
-      <text x="${cx}" y="${cy+r+36}" font-family="IBM Plex Sans" font-size="10.5" fill="#8ea0b3" text-anchor="middle">${o.mainDialLabel}</text>
-      <text x="${cx}" y="18" font-family="IBM Plex Sans" font-size="10.5" fill="#8ea0b3" text-anchor="middle">${o.subDialLabel}</text>
-      ${help}
-    </svg>`;
+      fn((e.clientX - last.x)*k, e.clientY - last.y, axis);
+      last = { x: e.clientX, y: e.clientY };
+      simRefresh();
+      e.preventDefault();
+    });
+    const end = () => { last = null; };
+    svg.addEventListener("pointerup", end);
+    svg.addEventListener("pointercancel", end);
   }
 
-  function renderComparadorSingle(valueMM, showHelp, unit){
-    if(unit !== "mm"){
-      const valueIN = valueMM/MM_PER_IN;
-      return comparadorFace(valueIN, {
-        resolutionPerDiv: 0.001, mainDivisions: 100, unitPerRev: 0.1, subCount: 10, r: 82,
-        mainDialLabel: "dial principal · milésimas (in)", subDialLabel: "dial pequeño = décimas de in (vueltas)", showHelp
-      });
-    }
-    return comparadorFace(valueMM, {
-      resolutionPerDiv: 0.01, mainDivisions: 100, unitPerRev: 1, subCount: 10, r: 82,
-      mainDialLabel: "dial principal · centésimas (mm)", subDialLabel: "dial pequeño = mm enteros (vueltas)", showHelp
-    });
+  function mountInstrument(){
+    cancelAnimationFrame(sim.raf);
+    const inst = INSTRUMENTS[state.instrument];
+    const showHelp = el("helpToggle").checked && state.mode === "practica";
+    const api = sim.api = inst.build(state.currentValueMM, state.answerUnit, showHelp);
+    el("svgHolder").innerHTML = api.html +
+      `<div class="simbar"><span class="simstatus" id="simStatus" aria-live="polite"></span>
+        <span class="simbtns"><button class="btn" type="button" id="simClose">${api.labels.close}</button><button class="btn" type="button" id="simOpen">${api.labels.open}</button></span></div>`;
+    bindDrag(el("simOv"), (dx, dy, axis) => api.drag(dx, dy, axis));
+    if(api.lupaDrag) bindDrag(el("simLupa"), (dx, dy, axis) => api.lupaDrag(dx, dy, axis));
+    el("simClose").addEventListener("click", () => simAnimate(api.closeTo));
+    el("simOpen").addEventListener("click", () => simAnimate(api.openTo));
+    simRefresh();
   }
 
   // ---------- app logic ----------
@@ -731,7 +920,7 @@
     } else if(uConf.isFraction){
       hint.innerHTML = `Escribe tu lectura como fracción, por ejemplo <strong>5/${uConf.fracDen}</strong> o <strong>1 3/${uConf.fracDen}</strong> (número mixto).`;
     } else {
-      hint.textContent = "Elige en qué unidad vas a responder; las tres representan la misma escala física, solo cambia el formato de tu respuesta.";
+      hint.textContent = "Elige en qué unidad vas a responder: la medida de la pieza es la misma; cambia la escala que lees y el formato de tu respuesta.";
     }
   }
 
@@ -748,6 +937,7 @@
   function newPiece(){
     const inst = INSTRUMENTS[state.instrument];
     state.currentValueMM = inst.genValueMM();
+    sim.p = null;
     state.pieceShownAt = Date.now();
     state.answerUnit = state.unitByInst[state.instrument] || "mm";
     document.getElementById("instTitle").textContent = inst.label;
@@ -764,8 +954,8 @@
 
   function renderSVG(){
     const inst = INSTRUMENTS[state.instrument];
-    const showHelp = document.getElementById("helpToggle").checked && state.mode==="practica";
-    document.getElementById("svgHolder").innerHTML = inst.render(state.currentValueMM, showHelp, state.answerUnit);
+    void inst;
+    mountInstrument();
   }
 
   function formatMMSS(ms){
@@ -816,6 +1006,12 @@
     const uConf = inst.units[unit];
     const raw = document.getElementById("readingInput").value;
     if(raw === "") return;
+    if(sim.api && !sim.api.seated()){
+      const fb0 = document.getElementById("feedback");
+      fb0.className = "feedback bad";
+      fb0.innerHTML = `<span class="big">Falta medir la pieza</span>Primero lleva el instrumento hasta el contacto con la pieza; después toma tu lectura.`;
+      return;
+    }
     const entered = uConf.isFraction ? parseFractionToDecimal(raw) : parseFloat(raw);
     if(isNaN(entered)){
       const fb = document.getElementById("feedback");
@@ -860,6 +1056,7 @@
   function newPieceKeepMode(){
     const inst = INSTRUMENTS[state.instrument];
     state.currentValueMM = inst.genValueMM();
+    sim.p = null;
     state.pieceShownAt = Date.now();
     randomizeAnswerUnit();
     updateUnitUI();
@@ -1024,6 +1221,7 @@
   });
 
   // ---------- init ----------
+  document.body.insertAdjacentHTML("beforeend", SVG_DEFS);
   buildTabs();
   document.getElementById("lenField").style.display = "none";
   document.getElementById("timeField").style.display = "none";
