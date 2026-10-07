@@ -42,7 +42,7 @@ Si usas el Simulador Metrológico en docencia o investigación, cítalo así (ta
 }
 ```
 
-<!-- DOI_NOTE -->
+El DOI de arriba (*concept DOI*) siempre apunta a la versión más reciente. DOI de la versión 1.1.0: [10.5281/zenodo.23225339](https://doi.org/10.5281/zenodo.23225339). DOI de la versión 1.0.0: [10.5281/zenodo.23088997](https://doi.org/10.5281/zenodo.23088997). Registro en Zenodo: <https://zenodo.org/records/23225339>
 
 ## Autoría
 
