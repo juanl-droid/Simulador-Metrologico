@@ -23,17 +23,17 @@ Los instrumentos se dibujan con su aspecto físico real y se manipulan como los 
 Si usas el Simulador Metrológico en docencia o investigación, cítalo así (también disponible en el botón **Cite this repository** de GitHub y en la app, al pie: *Créditos y cómo citar*):
 
 **APA 7**
-> Hernández Méndez, J. L. (2026). *Simulador Metrológico: simulador virtual interactivo para la enseñanza de la lectura de instrumentos de medición mecánica (calibrador vernier, micrómetro y comparador de carátula)* (Versión 1.0.0) [Software]. Universidad Autónoma de Nayarit. https://doi.org/10.5281/zenodo.23088996
+> Hernández Méndez, J. L. (2026). *Simulador Metrológico: simulador virtual interactivo para la enseñanza de la lectura de instrumentos de medición mecánica (calibrador vernier, micrómetro y comparador de carátula)* (Versión 1.1.0) [Software]. Universidad Autónoma de Nayarit. https://doi.org/10.5281/zenodo.23088996
 
 **IEEE**
-> J. L. Hernández Méndez, “Simulador Metrológico: simulador virtual interactivo para la enseñanza de la lectura de instrumentos de medición mecánica (calibrador vernier, micrómetro y comparador de carátula),” versión 1.0.0, Universidad Autónoma de Nayarit, Tepic, Nayarit, México, 2026. [En línea]. Disponible: https://juanl-droid.github.io/Simulador-Metrologico/. doi: 10.5281/zenodo.23088996
+> J. L. Hernández Méndez, “Simulador Metrológico: simulador virtual interactivo para la enseñanza de la lectura de instrumentos de medición mecánica (calibrador vernier, micrómetro y comparador de carátula),” versión 1.1.0, Universidad Autónoma de Nayarit, Tepic, Nayarit, México, 2026. [En línea]. Disponible: https://juanl-droid.github.io/Simulador-Metrologico/. doi: 10.5281/zenodo.23088996
 
 **BibTeX**
 ```bibtex
 @software{hernandez2026metrologico,
   author    = {Hernández Méndez, Juan Luis},
   title     = {{Simulador Metrológico}: Simulador virtual interactivo para la enseñanza de la lectura de instrumentos de medición mecánica (calibrador vernier, micrómetro y comparador de carátula)},
-  version   = {1.0.0},
+  version   = {1.1.0},
   year      = {2026},
   publisher = {Universidad Autónoma de Nayarit},
   doi       = {10.5281/zenodo.23088996},
@@ -42,7 +42,7 @@ Si usas el Simulador Metrológico en docencia o investigación, cítalo así (ta
 }
 ```
 
-El DOI de arriba (*concept DOI*) siempre apunta a la versión más reciente. DOI de la versión 1.0.0: [10.5281/zenodo.23088997](https://doi.org/10.5281/zenodo.23088997). Registro en Zenodo: <https://zenodo.org/records/23088997>
+<!-- DOI_NOTE -->
 
 ## Autoría
 

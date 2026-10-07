@@ -6,9 +6,11 @@ abstract: >-
   Aplicación web progresiva, libre y sin registro, para que estudiantes de ingeniería
   practiquen la lectura de instrumentos de medición mecánica: calibrador vernier
   (0.05 mm / 1/128 in), micrómetro (0.01 mm / 0.001 in) y comparador de carátula
-  (0.01 mm / 0.001 in). Cada instrumento se dibuja con su escala métrica y su escala en
-  pulgadas sobre la misma pieza, generada al azar, y el estudiante responde en mm, en
-  pulgada decimal o en pulgada fraccionaria. Incluye modo de práctica con
+  (0.01 mm / 0.001 in). Los instrumentos se dibujan con su aspecto físico real y se
+  manipulan como los reales (corredera y mordazas del vernier; tambor, husillo y
+  trinquete del micrómetro; varilla del palpador del comparador) hasta hacer contacto
+  con una pieza generada al azar; una lupa amplía la zona de lectura y el estudiante
+  responde en mm, en pulgada decimal o en pulgada fraccionaria. Incluye modo de práctica con
   retroalimentación inmediata y ayuda de alineación, modo de evaluación con número de
   piezas y tiempo límite configurables, bitácora de sesión con error y tiempo por
   lectura, exportación de resultados a CSV y registro automático de cada lectura en una
@@ -22,16 +24,13 @@ authors:
     city: "Tepic"
     region: "Nayarit"
     country: "MX"
-version: "1.0.0"
-date-released: "2026-10-01"
+version: "1.1.0"
+date-released: "2026-10-07"
 doi: "10.5281/zenodo.23088996"
 identifiers:
   - type: doi
     value: "10.5281/zenodo.23088996"
     description: "DOI de concepto (todas las versiones)"
-  - type: doi
-    value: "10.5281/zenodo.23088997"
-    description: "DOI de la versión 1.0.0"
 license: MIT
 url: "https://juanl-droid.github.io/Simulador-Metrologico/"
 repository-code: "https://github.com/juanl-droid/Simulador-Metrologico"
