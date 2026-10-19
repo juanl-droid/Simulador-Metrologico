@@ -1,4 +1,4 @@
-const CACHE_NAME = "metrologia-sim-v7";
+const CACHE_NAME = "metrologia-sim-v8";
 const CORE_ASSETS = [
   "./index.html",
   "./manifest.webmanifest",
@@ -37,7 +37,8 @@ self.addEventListener("fetch", (event) => {
     // reciente publicada. Solo si no hay conexión se usa la copia guardada
     // (por eso el simulador sigue funcionando sin internet).
     event.respondWith(
-      fetch(event.request)
+      // cache: "no-cache" obliga a preguntar al servidor y no usar la copia del navegador.
+      fetch(event.request, { cache: "no-cache" })
         .then((response) => {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
