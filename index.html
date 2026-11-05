@@ -185,6 +185,7 @@
     padding:10px 12px;border-radius:4px;min-width:0;
   }
   .reading-row input[type=number]:focus, .reading-row input[type=text]:focus{outline:none;border-color:var(--amber);}
+  .unit-hint:empty{display:none;}
   .unit-hint{font-size:11.5px;color:var(--text-dim);margin:-8px 0 14px;}
 
   .feedback{
@@ -249,9 +250,7 @@
 <body>
 <div class="wrap">
   <header>
-    <p class="eyebrow">MÓDULO DE METROLOGÍA · PROTOTIPO DE VALIDACIÓN</p>
     <h1>Simulador de instrumentos de medición</h1>
-    <p class="sub">Mide piezas con un calibrador vernier, un micrómetro y un comparador de carátula como los reales: manipula el instrumento hasta tocar la pieza y toma la lectura en milímetros o en pulgadas.</p>
   </header>
 
   <div class="toolbar">
@@ -298,7 +297,6 @@
       </div>
       <div id="svgHolder"></div>
       <label class="help-toggle"><input type="checkbox" id="helpToggle"> Mostrar ayuda de lectura (línea verde de referencia, solo en práctica)</label>
-      <div class="instructions" id="instructions"></div>
     </div>
 
     <div class="panel">
@@ -309,7 +307,7 @@
         <input type="number" step="0.01" id="readingInput" placeholder="0.00">
         <button class="btn primary" id="submitBtn">Verificar</button>
       </div>
-      <p class="unit-hint" id="unitHint">Elige en qué unidad vas a responder (mm o in); el instrumento se lee igual; solo cambia la escala.</p>
+      <p class="unit-hint" id="unitHint"></p>
       <div class="feedback" id="feedback">Escribe tu lectura y presiona Verificar.</div>
       <div id="summaryHolder"></div>
       <h2 style="margin-top:16px;">Bitácora de sesión</h2>
@@ -323,7 +321,7 @@
   </div>
 
   <footer>
-    Prototipo desarrollado para el protocolo de investigación «Diseño y validación de un módulo virtual/interactivo para la enseñanza de instrumentos de medición mecánica». Cada instrumento se dibuja con su escala métrica y su escala en pulgadas sobre la misma pieza (resoluciones: vernier 0.05 mm / 1/128 in · micrómetro 0.01 mm / 0.001 in · comparador 0.01 mm / 0.001 in por vuelta). Estos valores pueden ajustarse según el instrumento real usado como referencia en la validación de expertos.
+    Prototipo desarrollado para el protocolo de investigación «Diseño y validación de un módulo virtual/interactivo para la enseñanza de instrumentos de medición mecánica». Cada instrumento se dibuja con su escala métrica y su escala en pulgadas sobre la misma pieza (resoluciones: vernier 0.05 mm / 1/128 in · micrómetro 0.01 mm / 0.001 in · comparador 0.01 mm / 0.001 in por división). Estos valores pueden ajustarse según el instrumento real usado como referencia en la validación de expertos.
     <div class="credbar"><span id="credline"></span><span aria-hidden="true">·</span><button class="linkbtn" id="opencredits" type="button">Créditos y cómo citar</button></div>
   </footer>
 </div>
@@ -441,7 +439,6 @@
         in: { resolution: 1/128, decimals: 4 },
         infrac: { resolution: 1/128, decimals: 4, isFraction: true, fracDen: 128 }
       },
-      instructions: "Arrastra la corredera hasta que las mordazas toquen la pieza (o usa el botón «Cerrar las mordazas»). Lee en la lupa. Milímetros (escala inferior): cuenta los milímetros completos que quedan a la izquierda del cero del nonio; después busca la línea del nonio que coincide exactamente con una línea de la regla: cada número del nonio vale 0.1 mm y la línea intermedia 0.05 mm. Pulgadas (escala superior): cuenta los dieciseisavos completos antes del cero del nonio superior; la línea del nonio (0 a 8) que coincide indica cuántos 1/128 in se suman. Puedes responder en milímetros, en pulgada decimal (ej. 0.0781) o en fracción (ej. 5/128).",
       genValueMM(){
         const steps = 10 + Math.floor(Math.random()*2791); // 0.50..140 mm en pasos de 0.05 mm
         return steps*0.05;
@@ -454,23 +451,19 @@
       metaIN: "escala en pulgadas · resolución 0.001 in · rango 0–1 in",
       units: {
         mm: { resolution: 0.01, decimals: 2 },
-        in: { resolution: 0.001, decimals: 3 },
-        infrac: { resolution: 0.001, decimals: 3, isFraction: true, fracDen: 1000 }
+        in: { resolution: 0.001, decimals: 3 }
       },
-      instructions: "Arrastra el tambor hacia la izquierda para acercar el husillo y gíralo fino (arrastre vertical) hasta que el trinquete indique el contacto con la pieza. Lee en la lupa. Milímetros: en el manguito cuenta los milímetros enteros visibles (líneas de arriba) y suma 0.5 mm si ya se descubrió la media línea de abajo; en el tambor (50 divisiones) lee la línea que coincide con la línea índice: son centésimas de mm. Pulgadas: en el manguito cada número vale 0.1 in y cada línea 0.025 in; el tambor (25 divisiones) da las milésimas de pulgada. Puedes responder en milímetros, en pulgada decimal (ej. 0.235) o en fracción de milésimas (ej. 235/1000).",
       genValueMM(){ const v = 0.5 + Math.random()*23.5; return Math.round(v*100)/100; },
       build(valueMM, unit, showHelp){ return buildMicrometer(valueMM, unit, showHelp); }
     },
     comparador: {
       label: "Comparador de carátula",
-      metaMM: "escala mm · resolución 0.01 mm/vuelta · rango 0–10 mm",
-      metaIN: "escala en pulgadas · resolución 0.001 in/vuelta · rango 0–0.5 in (≈12.7 mm)",
+      metaMM: "escala mm · 0.01 mm por división · 1 mm por vuelta · rango 0–10 mm",
+      metaIN: "escala en pulgadas · 0.001 in por división · 0.1 in por vuelta · rango 0–1 in",
       units: {
         mm: { resolution: 0.01, decimals: 2 },
-        in: { resolution: 0.001, decimals: 3 },
-        infrac: { resolution: 0.001, decimals: 3, isFraction: true, fracDen: 1000 }
+        in: { resolution: 0.001, decimals: 3 }
       },
-      instructions: "El comparador está montado en su soporte, con el palpador apoyado en la mesa de referencia y la carátula en cero. Desliza la pieza bajo el palpador: la varilla sube y mueve las agujas. Milímetros: la aguja pequeña cuenta las vueltas completas (milímetros enteros) y la aguja grande las centésimas de mm. Pulgadas: la aguja pequeña cuenta décimas de pulgada (una vuelta de la aguja grande equivale a 0.1 in) y la aguja grande las milésimas. Puedes responder en milímetros, en pulgada decimal (ej. 0.235) o en fracción de milésimas (ej. 235/1000).",
       genValueMM(){ const v = 0.5 + Math.random()*9.4; return Math.round(v*100)/100; },
       build(valueMM, unit, showHelp){ return buildComparador(valueMM, unit, showHelp); }
     }
@@ -488,6 +481,7 @@
     evalActive: false,
     evalDeadline: null,   // timestamp (ms) en que se cierra la evaluación por tiempo, o null si no hay límite
     evalTimerId: null,
+    answered: false,      // la pieza de práctica ya se verificó (no se puede volver a enviar)
     pieceShownAt: null    // timestamp (ms) en que se mostró la pieza actual, para medir el tiempo de respuesta
   };
 
@@ -538,29 +532,29 @@
     let sc = "";
     for(let mm=0; mm<=MAX; mm++){
       const x = XS + mm*S, maj = mm%10===0, mid = mm%5===0;
-      sc += vline(x, BY+BH, BY+BH-(maj?16:(mid?11:7)), maj?1.2:.8);
-      if(maj) sc += txt(x+2, BY+BH-21, mm/10, 12, {a:"start", w:600});
+      sc += vline(x, BY+BH, BY+BH-(maj?18:(mid?12:7)), maj?1.5:1);
+      if(maj) sc += txt(x+2, BY+BH-23, mm/10, 15, {a:"start", w:700});
     }
     for(let s=0; s<=96; s++){
       const x = XS + s*IN/16*S, w = s%16===0, h = s%8===0, q = s%4===0;
-      sc += vline(x, BY, BY+(w?16:(h?12:(q?9:6))), w?1.2:.8);
-      if(w && s>0) sc += txt(x+2, BY+29, s/16, 12, {a:"start", w:600});
+      sc += vline(x, BY, BY+(w?18:(h?13:(q?9:6))), w?1.5:1);
+      if(w && s>0) sc += txt(x+2, BY+33, s/16, 15, {a:"start", w:700});
     }
     sc += txt(XS+MAX*S+16, BY+BH-10, "mm", 11, {a:"start", w:600, fill:"#3d4852"});
     sc += txt(XS+MAX*S+16, BY+18, "in", 11, {a:"start", w:600, fill:"#3d4852"});
     let vn = "";
     for(let i=0;i<=20;i++){
       const x = XS+i*.95*S;
-      vn += vline(x, BY+BH, BY+BH+(i%10===0?11:(i%2===0?9:6)), .9);
-      if(i%2===0) vn += txt(x, BY+BH+21, (i/2)%10, 7.5, {w:600});
+      vn += vline(x, BY+BH, BY+BH+(i%10===0?12:(i%2===0?10:6)), 1.1);
+      if(i%10===0) vn += txt(x, BY+BH+22, i/2, 10, {w:700});
     }
-    vn += txt(XS+20*.95*S+8, BY+BH+21, "0.05mm", 7.5, {a:"start", w:600});
+    vn += txt(XS+20*.95*S+10, BY+BH+22, "0.05mm", 9.5, {a:"start", w:700});
     for(let i=0;i<=8;i++){
       const x = XS+i*(7/128)*IN*S;
-      vn += vline(x, BY, BY-(i%4===0?11:7), .9);
-      if(i%4===0) vn += txt(x, BY-14, i, 7.5, {w:600});
+      vn += vline(x, BY, BY-(i%4===0?12:7), 1.1);
+      if(i%4===0) vn += txt(x, BY-14, i, 10, {w:700});
     }
-    vn += txt(XS+8*(7/128)*IN*S+10, BY-14, "1/128in", 7.5, {a:"start", w:600});
+    vn += txt(XS+8*(7/128)*IN*S+10, BY-14, "1/128in", 9.5, {a:"start", w:700});
     const screw = (x,y) => `<circle cx="${n2(x)}" cy="${y}" r="3.4" fill="#262d33"/><path d="M${n2(x-2)} ${y}h4M${n2(x)} ${y-2}v4" stroke="#8c979f" stroke-width=".8"/>`;
     const plates = `<rect x="${PL}" y="${BY-PH}" width="${n2(PR-PL)}" height="${PH}" fill="url(#g-steel)" stroke="#5b6771"/>
         <rect x="${PL}" y="${BY+BH}" width="${n2(PR-PL)}" height="${PH}" fill="url(#g-steel)" stroke="#5b6771"/>
@@ -588,25 +582,25 @@
     let lm = "";
     for(let mm=0; mm<=MAX; mm++){
       const x = mm*Z, maj = mm%10===0, mid = mm%5===0;
-      lm += vline(x, LB, LB-(maj?50:(mid?40:28)), maj?2.4:1.8);
-      if(maj) lm += txt(x+7, LB-58, mm/10, 26, {a:"start", w:600});
+      lm += vline(x, LB, LB-(maj?50:(mid?40:28)), maj?2.8:2.2);
+      if(maj) lm += txt(x+7, LB-58, mm/10, 28, {a:"start", w:700});
     }
     for(let s=0; s<=96; s++){
       const x = s*IN/16*Z, w = s%16===0, h = s%8===0, q = s%4===0, e8 = s%2===0;
-      lm += vline(x, LT, LT+(w?50:(h?42:(q?34:(e8?27:19)))), w?2.4:1.8);
-      if(w && s>0) lm += txt(x+7, LT+76, s/16, 26, {a:"start", w:600});
+      lm += vline(x, LT, LT+(w?50:(h?42:(q?34:(e8?27:19)))), w?2.8:2.2);
+      if(w && s>0) lm += txt(x+7, LT+78, s/16, 28, {a:"start", w:700});
     }
     let lv = "";
     for(let i=0;i<=20;i++){
       const x = LX0 + i*.95*Z;
-      lv += vline(x, LB, LB+(i%2===0?30:19), 1.8);
-      if(i%2===0) lv += txt(x, LB+52, (i/2)%10, 17, {w:600});
+      lv += vline(x, LB, LB+(i%2===0?30:19), 2.2);
+      if(i%2===0) lv += txt(x, LB+54, i/2, 20, {w:700});
     }
-    lv += txt(LX0+20*.95*Z+22, LB+52, "0.05mm", 16, {a:"start", w:600});
+    lv += txt(LX0+20*.95*Z+26, LB+54, "0.05mm", 17, {a:"start", w:700});
     for(let i=0;i<=8;i++){
       const x = LX0 + i*(7/128)*IN*Z;
-      lv += vline(x, LT, LT-(i%4===0?30:19), 1.8);
-      if(i%4===0) lv += txt(x, LT-37, i, 17, {w:600});
+      lv += vline(x, LT, LT-(i%4===0?30:19), 2.2);
+      if(i%4===0) lv += txt(x, LT-37, i, 20, {w:700});
     }
     lv += txt(LX0+8*(7/128)*IN*Z+40, LT-37, "1/128in", 16, {a:"start", w:600});
     const zeroMark = isMM
@@ -649,8 +643,8 @@
       drag(dx){ sim.p = Math.min(MAX, Math.max(target, sim.p + dx/S)); },
       closeTo: target, openTo: Math.min(MAX, target + 28),
       labels: { close: "Cerrar las mordazas sobre la pieza", open: "Abrir",
-        open_msg: "Mordazas abiertas: arrastra la corredera hacia la izquierda hasta que tope con la pieza.",
-        seated_msg: "Mordazas en contacto con la pieza: toma tu lectura en la lupa." }
+        open_msg: "Mordazas abiertas.",
+        seated_msg: "Mordazas en contacto con la pieza." }
     };
   }
 
@@ -755,8 +749,8 @@
       },
       closeTo: target, openTo: Math.min(MAX, target + 5.2),
       labels: { close: "Girar el tambor hasta el contacto", open: "Abrir",
-        open_msg: "Husillo abierto: arrastra el tambor hacia la izquierda (avance rápido) o hacia arriba y abajo (giro fino) hasta que el husillo toque la pieza.",
-        seated_msg: "Clic del trinquete: el husillo tocó la pieza. Toma tu lectura en la lupa." }
+        open_msg: "Husillo abierto.",
+        seated_msg: "Clic del trinquete: husillo en contacto con la pieza." }
     };
   }
 
@@ -774,14 +768,14 @@
       const a = (i/100)*2*Math.PI - Math.PI/2, c = Math.cos(a), s = Math.sin(a);
       const r2 = i%10===0 ? 108 : (i%5===0 ? 114 : 120);
       face += `<line x1="${n2(CX+130*c)}" y1="${n2(CY+130*s)}" x2="${n2(CX+r2*c)}" y2="${n2(CY+r2*s)}" stroke="${INK}" stroke-width="${i%10===0?2.2:1.2}"/>`;
-      if(i%10===0) face += txt(CX+90*c, CY+90*s+6.5, i, 19, {w:600});
+      if(i%10===0) face += txt(CX+94*c, CY+94*s+6.5, i, 19, {w:600});
     }
-    const SCY = CY + 56, SR = 34;
+    const SCY = CY - 49, SR = 35;
     let sub = `<circle cx="${CX}" cy="${SCY}" r="${SR}" fill="none" stroke="${INK}" stroke-width="1"/>`;
     for(let i=0;i<10;i++){
       const a = (i/10)*2*Math.PI - Math.PI/2, c = Math.cos(a), s = Math.sin(a);
-      sub += `<line x1="${n2(CX+SR*c)}" y1="${n2(SCY+SR*s)}" x2="${n2(CX+(SR-6)*c)}" y2="${n2(SCY+(SR-6)*s)}" stroke="${INK}" stroke-width="1.2"/>`;
-      sub += txt(CX+(SR-15)*c, SCY+(SR-15)*s+4, i, 11.5, {w:600});
+      sub += `<line x1="${n2(CX+SR*c)}" y1="${n2(SCY+SR*s)}" x2="${n2(CX+(SR-7)*c)}" y2="${n2(SCY+(SR-7)*s)}" stroke="${INK}" stroke-width="1.6"/>`;
+      sub += txt(CX+(SR-16)*c, SCY+(SR-16)*s+4.3, i, 12, {w:700});
     }
     const ht = target*S;
     const svg = `<svg class="instrument-svg sim-ov sim-dial" id="simOv" viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Comparador de carátula en su soporte: desliza la pieza bajo el palpador">
@@ -806,7 +800,7 @@
       <circle cx="${CX}" cy="${CY}" r="${R}" fill="url(#g-bezel)" stroke="#39434b" stroke-width="1.5"/>
       <circle cx="${CX}" cy="${CY}" r="${R-14}" fill="url(#g-face)" stroke="#39434b"/>
       ${face}${sub}
-      ${txt(CX, CY-44, isMM?"0.01 mm":"0.001 in", 15, {w:600})}${txt(CX, CY-26, isMM?"0 – 10 mm":"0 – 1 in", 11, {fill:"#56626c"})}
+      ${txt(CX, CY+46, isMM?"0.01 mm":"0.001 in", 15, {w:600})}${txt(CX, CY+64, isMM?"0 – 10 mm":"0 – 1 in", 11, {fill:"#56626c"})}
       <line id="cHelp" x1="${CX}" y1="${CY}" x2="${CX}" y2="${CY-134}" stroke="${HELP}" stroke-width="2.2" stroke-dasharray="6,4" style="display:none"/>
       <line id="cSub" x1="${CX}" y1="${SCY+5}" x2="${CX}" y2="${SCY-SR+7}" stroke="${INK}" stroke-width="2"/><circle cx="${CX}" cy="${SCY}" r="3" fill="${INK}"/>
       <g id="cNeedle"><path d="M${CX-2.6} ${CY+26} L${CX+2.6} ${CY+26} L${CX+.7} ${CY-122} L${CX-.7} ${CY-122}Z" fill="#b3261e" stroke="#7d1a14" stroke-width=".5"/></g>
@@ -829,8 +823,8 @@
       drag(dx){ sim.p = Math.min(BX_OUT, Math.max(BX_IN, sim.p + dx)); },
       closeTo: BX_IN, openTo: BX_OUT, slow: true,
       labels: { close: "Colocar la pieza bajo el palpador", open: "Retirar la pieza",
-        open_msg: "El palpador descansa sobre la mesa y el comparador marca cero. Desliza la pieza hacia la izquierda hasta que quede bajo el palpador.",
-        seated_msg: "La pieza levantó la varilla del palpador: toma tu lectura en la carátula." }
+        open_msg: "Palpador sobre la mesa de referencia (lectura en cero).",
+        seated_msg: "Pieza bajo el palpador." }
     };
   }
 
@@ -922,7 +916,7 @@
 
   function updateUnitUI(){
     const inst = INSTRUMENTS[state.instrument];
-    document.querySelectorAll("#unitSeg button").forEach(b=>b.classList.toggle("active", b.dataset.unit===state.answerUnit));
+    document.querySelectorAll("#unitSeg button").forEach(b=>{ b.style.display = inst.units[b.dataset.unit] ? "" : "none"; b.classList.toggle("active", b.dataset.unit===state.answerUnit); });
     const uConf = inst.units[state.answerUnit];
     const input = document.getElementById("readingInput");
     if(uConf.isFraction){
@@ -941,7 +935,7 @@
     } else if(uConf.isFraction){
       hint.innerHTML = `Escribe tu lectura como fracción, por ejemplo <strong>5/${uConf.fracDen}</strong> o <strong>1 3/${uConf.fracDen}</strong> (número mixto).`;
     } else {
-      hint.textContent = "Elige en qué unidad vas a responder: la medida de la pieza es la misma; cambia la escala que lees y el formato de tu respuesta.";
+      hint.textContent = "";
     }
   }
 
@@ -961,10 +955,16 @@
     sim.p = null;
     state.pieceShownAt = Date.now();
     state.answerUnit = state.unitByInst[state.instrument] || "mm";
+    if(!inst.units[state.answerUnit]) state.answerUnit = "mm";
     document.getElementById("instTitle").textContent = inst.label;
     document.getElementById("instMeta").innerHTML = `${inst.metaMM}<br>${inst.metaIN}`;
-    document.getElementById("instructions").textContent = inst.instructions;
     document.getElementById("readingInput").value = "";
+    state.answered = false;
+    if(!state.evalActive){
+      document.getElementById("submitBtn").disabled = false;
+      document.getElementById("readingInput").disabled = false;
+      setUnitSegDisabled(false);
+    }
     updateUnitUI();
     document.getElementById("feedback").className = "feedback";
     document.getElementById("feedback").innerHTML = "Escribe tu lectura y presiona Verificar.";
@@ -1026,6 +1026,7 @@
     const unit = state.answerUnit;
     const uConf = inst.units[unit];
     const raw = document.getElementById("readingInput").value;
+    if(state.answered) return;
     if(raw === "") return;
     if(sim.api && !sim.api.seated()){
       const fb0 = document.getElementById("feedback");
@@ -1058,7 +1059,11 @@
       const okness = error <= uConf.resolution + 1e-6;
       fb.className = "feedback " + (okness?"good":"bad");
       fb.innerHTML = `<span class="big">${okness? "Correcto" : "Fuera de tolerancia"}</span>
-        Valor real: ${correctLabel} · Tu lectura: ${enteredDisplay} · Error: ${error.toFixed(uConf.decimals)} ${unit==="mm"?"mm":"in"}`;
+        Valor real: ${correctLabel} · Tu lectura: ${enteredDisplay} · Error: ${error.toFixed(uConf.decimals)} ${unit==="mm"?"mm":"in"}<br>Pulsa <strong>Nueva pieza</strong> para seguir practicando.`;
+      state.answered = true;
+      document.getElementById("submitBtn").disabled = true;
+      document.getElementById("readingInput").disabled = true;
+      setUnitSegDisabled(true);
       renderHistory();
       updateProgressLine();
     } else {
@@ -1210,6 +1215,8 @@
     setUnitSegDisabled(false);
     setMode("practica");
     document.querySelectorAll("#modeSeg button").forEach(b=>b.classList.toggle("active", b.dataset.mode==="practica"));
+    renderHistory();
+    updateProgressLine();
   }
 
   // ---------- events ----------
