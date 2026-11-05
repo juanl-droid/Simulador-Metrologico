@@ -300,6 +300,7 @@
       </div>
       <div id="svgHolder"></div>
       <label class="help-toggle"><input type="checkbox" id="helpToggle"> Mostrar ayuda de lectura (línea verde de referencia, solo en práctica)</label>
+      <label class="help-toggle"><input type="checkbox" id="soundToggle" checked> Sonido del instrumento</label>
     </div>
 
     <div class="panel">
@@ -631,6 +632,40 @@
     };
   }
 
+  // ===== Sonido del instrumento (sintetizado con Web Audio, sin archivos) =====
+  const snd = { ctx: null, last: 0 };
+  function sndOn(){ const t = el("soundToggle"); return !t || t.checked; }
+  function audioCtx(){
+    if(!sndOn()) return null;
+    try{
+      const AC = window.AudioContext || window.webkitAudioContext; if(!AC) return null;
+      snd.ctx = snd.ctx || new AC();
+      if(snd.ctx.state === "suspended") snd.ctx.resume();
+      return snd.ctx;
+    }catch(e){ return null; }
+  }
+  // "tick": roce del tambor al pasar cada división; "ratchet": clic metálico del trinquete
+  function playClick(kind){
+    const c = audioCtx(); if(!c) return;
+    const now = c.currentTime, rat = kind === "ratchet";
+    const dur = rat ? .045 : .014;
+    const buf = c.createBuffer(1, Math.ceil(c.sampleRate*dur), c.sampleRate), d = buf.getChannelData(0);
+    for(let i=0;i<d.length;i++) d[i] = (Math.random()*2-1) * Math.pow(1 - i/d.length, rat ? 4 : 7);
+    const src = c.createBufferSource(); src.buffer = buf;
+    const bp = c.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = rat ? 3200 : 5200; bp.Q.value = rat ? 3 : 1.6;
+    const g = c.createGain(); g.gain.value = rat ? .55 : .16;
+    src.connect(bp); bp.connect(g); g.connect(c.destination); src.start(now);
+    if(rat){
+      const o = c.createOscillator(), og = c.createGain();
+      o.type = "triangle"; o.frequency.setValueAtTime(1850, now); o.frequency.exponentialRampToValueAtTime(900, now+.04);
+      og.gain.setValueAtTime(.18, now); og.gain.exponentialRampToValueAtTime(.001, now+.05);
+      o.connect(og); og.connect(c.destination); o.start(now); o.stop(now+.06);
+    }
+  }
+  function tickThrottled(kind, minMs){
+    const t = performance.now(); if(t - snd.last < minMs) return; snd.last = t; playClick(kind);
+  }
+
   // ===== Micrómetro =====
   function thimbleMarks(xe, yc, R, reading, div, o){
     let s = "";
@@ -710,8 +745,12 @@
       </svg></div>`;
 
     const seated = () => sim.p - target < 1e-7;
+    const divStep = pitch/div;                         // avance del husillo por división del tambor (mm)
+    let lastDiv = Math.round(sim.p/divStep), ratAcc = 0;
     function update(){
       const p = sim.p, r = reading(p);
+      const dv = Math.round(p/divStep);
+      if(dv !== lastDiv){ tickThrottled("tick", 28); lastDiv = dv; }
       setAttr("mSpindle", "x", n2(XA + p*S)); setAttr("mSpindle", "width", n2(XR - XA - p*S + 12));
       setAttr("mThimble", "transform", `translate(${n2(p*S)},0)`);
       const om = el("mOvMarks"); if(om) om.innerHTML = thimbleMarks(XS0, AY, 30, r, div, {x0:1.5, len:8, lenMaj:13, sw:.7});
@@ -720,16 +759,20 @@
       const h = el("mHelp"); if(h) h.style.display = help ? "" : "none";
       const hint = el("mHint"); if(hint){ hint.setAttribute("transform", `translate(${n2(XS0+p*S+70)},${AY-58})`); hint.style.display = seated() ? "none" : ""; }
     }
+    // al seguir girando ya en contacto, el trinquete patina y suena "clic" en lugar de apretar
+    function move(d){
+      const want = sim.p + d;
+      if(want < target){
+        ratAcc += target - want;
+        if(ratAcc >= divStep*3){ ratAcc = 0; tickThrottled("ratchet", 70); }
+      } else ratAcc = 0;
+      sim.p = Math.min(MAX, Math.max(target, want));
+    }
     return {
       html: overview + lupa, update, seated, touch: "none",
-      drag(dx, dyPx, axis){
-        const d = axis === "y" ? (dyPx/9)*(pitch/div) : dx/S;
-        sim.p = Math.min(MAX, Math.max(target, sim.p + d));
-      },
-      lupaDrag(dx, dyPx, axis){
-        const d = axis === "y" ? (dyPx/9)*(pitch/div) : dx/Z;
-        sim.p = Math.min(MAX, Math.max(target, sim.p + d));
-      },
+      drag(dx, dyPx, axis){ move(axis === "y" ? (dyPx/9)*divStep : dx/S); },
+      lupaDrag(dx, dyPx, axis){ move(axis === "y" ? (dyPx/9)*divStep : dx/Z); },
+      arrive(to){ if(Math.abs(to - target) < 1e-7){ [0,140,280].forEach(ms => setTimeout(() => playClick("ratchet"), ms)); } },
       closeTo: target, openTo: MAX,
       labels: { close: "Girar el tambor hasta el contacto", open: "Abrir",
         open_msg: "Husillo abierto.",
@@ -829,6 +872,7 @@
       sim.p = k >= 1 ? to : from + (to - from)*e;
       simRefresh();
       if(k < 1) sim.raf = requestAnimationFrame(step);
+      else if(sim.api.arrive) sim.api.arrive(to);
     };
     sim.raf = requestAnimationFrame(step);
   }
