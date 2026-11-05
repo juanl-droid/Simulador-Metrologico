@@ -8,7 +8,7 @@
 
 Aplicación en línea: **<https://juanl-droid.github.io/Simulador-Metrologico/>** — libre, sin registro e instalable en teléfono o computadora; funciona sin conexión.
 
-Los instrumentos se dibujan con su aspecto físico real y se manipulan como los reales: en el calibrador vernier se arrastra la corredera hasta que las mordazas tocan la pieza; en el micrómetro se gira el tambor hasta que el husillo hace contacto (con su arco en herradura, yunque, manguito y trinquete); y en el comparador de carátula se desliza la pieza bajo el palpador, cuya varilla sube y mueve las agujas. Una lupa amplía la zona de lectura. La pieza se genera al azar y el estudiante elige en qué sistema responde: milímetros o pulgada decimal (y, en el vernier, también fracción de pulgada).
+Los instrumentos se dibujan con su aspecto físico real y se manipulan como los reales: en el calibrador vernier se arrastra la corredera hasta que las mordazas tocan la pieza; en el micrómetro se gira el tambor hasta que el husillo hace contacto (con su arco en herradura, yunque, manguito y trinquete); y en el comparador de carátula se desliza la pieza bajo el palpador, cuya varilla sube y mueve las agujas. El vernier se dibuja a escala de lectura (más ancho que la pantalla, con desplazamiento lateral) y el micrómetro tiene una lupa sobre el manguito y el tambor. La pieza se genera al azar y el estudiante elige en qué sistema responde: milímetros o pulgada decimal (y, en el vernier, también fracción de pulgada).
 
 | Instrumento | Resolución en mm | Resolución en pulgadas |
 |---|---|---|

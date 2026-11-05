@@ -9,7 +9,8 @@ abstract: >-
   (0.01 mm / 0.001 in). Los instrumentos se dibujan con su aspecto físico real y se
   manipulan como los reales (corredera y mordazas del vernier; tambor, husillo y
   trinquete del micrómetro; varilla del palpador del comparador) hasta hacer contacto
-  con una pieza generada al azar; una lupa amplía la zona de lectura y el estudiante
+  con una pieza generada al azar; el vernier se dibuja a escala de lectura y el micrómetro
+  tiene una lupa sobre el manguito y el tambor y el estudiante
   responde en mm o en pulgada decimal (en el vernier, también en fracción de pulgada). Incluye modo de práctica con
   retroalimentación inmediata y ayuda de alineación, modo de evaluación con número de
   piezas y tiempo límite configurables, bitácora de sesión con error y tiempo por

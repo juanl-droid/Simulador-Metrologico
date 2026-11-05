@@ -153,6 +153,9 @@
   .instrument-svg{width:100%;height:auto;display:block;background:var(--panel-2);border:1px solid var(--grid);border-radius:5px;}
   .sim-ov{user-select:none;-webkit-user-select:none;}
   .sim-dial{max-width:520px;margin:0 auto;}
+  .vscroll{overflow-x:auto;overflow-y:hidden;border-radius:5px;background:var(--panel-2);border:1px solid var(--grid);-webkit-overflow-scrolling:touch;}
+  .vscroll .instrument-svg.vbig{width:auto;max-width:none;border:0;border-radius:0;display:block;}
+  .vnote{font-size:12px;color:var(--text-dim);margin-top:5px;}
   .lupa{margin-top:10px;}
   .lupa-tag{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--amber);margin:0 0 5px;letter-spacing:.02em;}
   .lupa-scroll{overflow-x:auto;border-radius:5px;-webkit-overflow-scrolling:touch;}
@@ -518,129 +521,109 @@
 
   // ===== Calibrador vernier =====
   function buildVernier(target, unit, help){
-    // Vista modelada sobre un calibrador real: la regla queda descubierta y el nonio va en dos
-    // placas angostas atornilladas a la corredera, una sobre el borde superior (pulgadas) y otra
-    // bajo el borde inferior (milímetros).
-    const S = 4, X0 = 80, BY = 112, BH = 84, XS = X0+40, MAX = 150;
-    const Z = 36, LX0 = 150, LT = 64, LB = 236;       // lupa: px/mm, x del cero del nonio, bordes de la regla
+    // Calibrador completo dibujado a escala de lectura (sin lupa): la regla mide 24 px por mm,
+    // así que el instrumento es más ancho que la pantalla y la vista se desplaza siguiendo a la
+    // corredera. La regla tiene la escala en pulgadas arriba y en milímetros abajo; el nonio va
+    // en la corredera, que abraza la regla por arriba y por abajo.
+    const Z = 24, X0 = 120, XS = X0 + 12*Z, MAX = 150;
+    const BY = 120, BH = 170, PH = 56, H = 486;
     const IN = MM_PER_IN, isMM = unit === "mm";
     if(sim.p === null) sim.p = Math.min(MAX, target + 28);
-    const PH = 30, PL = XS-14, PR = XS + 19*.95*S + 52;   // alto y extremos de las placas del nonio
-    const jawTip = BY+BH+130;
+    const VW = 19*.95*Z;                                   // largo del nonio de milímetros
+    const PL = XS - 30, PR = XS + VW + 96;                 // extremos de las placas del nonio
+    const BEAM_R = XS + (MAX + 4)*Z + (PR - X0);           // la regla alcanza a la corredera abierta
+    const W = BEAM_R + 40;
+    const jawTip = H - 14;
 
-    // --- vista general ---
+    // --- regla ---
     let sc = "";
-    for(let mm=0; mm<=MAX; mm++){
-      const x = XS + mm*S, maj = mm%10===0, mid = mm%5===0;
-      sc += vline(x, BY+BH, BY+BH-(maj?18:(mid?12:7)), maj?1.5:1);
-      if(maj) sc += txt(x+2, BY+BH-23, mm/10, 15, {a:"start", w:700});
+    for(let mm=0; mm<=MAX+(PR-XS)/Z; mm++){
+      const x = XS + mm*Z, maj = mm%10===0, mid = mm%5===0;
+      sc += vline(x, BY+BH, BY+BH-(maj?50:(mid?38:26)), maj?2.6:1.8);
+      if(maj) sc += txt(x+6, BY+BH-58, mm, 28, {a:"start", w:700});
+      else if(mid) sc += txt(x, BY+BH-44, mm, 15, {w:600, fill:"#3d4852"});
     }
-    for(let s=0; s<=96; s++){
-      const x = XS + s*IN/16*S, w = s%16===0, h = s%8===0, q = s%4===0;
-      sc += vline(x, BY, BY+(w?18:(h?13:(q?9:6))), w?1.5:1);
-      if(w && s>0) sc += txt(x+2, BY+33, s/16, 15, {a:"start", w:700});
+    for(let s=0; s<=Math.floor((MAX+(PR-XS)/Z)/IN*16); s++){
+      const x = XS + s*IN/16*Z, w = s%16===0, h = s%8===0, q = s%4===0, e8 = s%2===0;
+      sc += vline(x, BY, BY+(w?50:(h?42:(q?34:(e8?27:19)))), w?2.6:1.8);
+      if(w) sc += txt(x+6, BY+76, s/16, 28, {a:"start", w:700});
+      else if(h) sc += txt(x, BY+62, "½", 16, {w:600, fill:"#3d4852"});
     }
-    sc += txt(XS+MAX*S+16, BY+BH-10, "mm", 11, {a:"start", w:600, fill:"#3d4852"});
-    sc += txt(XS+MAX*S+16, BY+18, "in", 11, {a:"start", w:600, fill:"#3d4852"});
+    sc += txt(XS-14, BY+BH-12, "mm", 16, {a:"end", w:700, fill:"#3d4852"});
+    sc += txt(XS-14, BY+26, "in", 16, {a:"end", w:700, fill:"#3d4852"});
+
+    // --- nonio (en la corredera) ---
     let vn = "";
     for(let i=0;i<=20;i++){
-      const x = XS+i*.95*S;
-      vn += vline(x, BY+BH, BY+BH+(i%10===0?12:(i%2===0?10:6)), 1.1);
-      if(i%10===0) vn += txt(x, BY+BH+22, i/2, 10, {w:700});
+      const x = XS + i*.95*Z;
+      vn += vline(x, BY+BH, BY+BH+(i%2===0?30:19), 2);
+      if(i%2===0) vn += txt(x, BY+BH+50, i/2, 19, {w:700});
     }
-    vn += txt(XS+20*.95*S+10, BY+BH+22, "0.05mm", 9.5, {a:"start", w:700});
+    vn += txt(XS+VW+34, BY+BH+24, "0.05 mm", 15, {a:"start", w:700});
     for(let i=0;i<=8;i++){
-      const x = XS+i*(7/128)*IN*S;
-      vn += vline(x, BY, BY-(i%4===0?12:7), 1.1);
-      if(i%4===0) vn += txt(x, BY-14, i, 10, {w:700});
+      const x = XS + i*(7/128)*IN*Z;
+      vn += vline(x, BY, BY-(i%4===0?30:19), 2);
+      if(i%4===0) vn += txt(x, BY-36, i, 19, {w:700});
     }
-    vn += txt(XS+8*(7/128)*IN*S+10, BY-14, "1/128in", 9.5, {a:"start", w:700});
-    const screw = (x,y) => `<circle cx="${n2(x)}" cy="${y}" r="3.4" fill="#262d33"/><path d="M${n2(x-2)} ${y}h4M${n2(x)} ${y-2}v4" stroke="#8c979f" stroke-width=".8"/>`;
-    const plates = `<rect x="${PL}" y="${BY-PH}" width="${n2(PR-PL)}" height="${PH}" fill="url(#g-steel)" stroke="#5b6771"/>
-        <rect x="${PL}" y="${BY+BH}" width="${n2(PR-PL)}" height="${PH}" fill="url(#g-steel)" stroke="#5b6771"/>
-        ${screw(PL+9, BY-PH+7)}${screw(PR-9, BY-PH+7)}${screw(PL+9, BY+BH+PH-7)}${screw(PR-9, BY+BH+PH-7)}`;
+    vn += txt(XS+8*(7/128)*IN*Z+40, BY-36, "1/128 in", 15, {a:"start", w:700});
 
-    const overview = `<svg class="instrument-svg sim-ov" id="simOv" viewBox="0 0 1000 350" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Calibrador vernier: arrastra la corredera hasta que las mordazas toquen la pieza">
-      <rect x="${X0}" y="${BY+BH+56}" width="${n2(target*S)}" height="56" rx="3" fill="url(#g-piece)" stroke="#7a4f0c"/>
-      ${target*S>34?txt(X0+target*S/2, BY+BH+89, "pieza", 13, {fill:"#4d3206", w:600}):""}
-      <polygon points="${X0-30},${BY} ${X0},${BY} ${X0},${BY-70} ${X0-7},${BY-70} ${X0-30},${BY-26}" fill="url(#g-jaw)" stroke="#5b6771"/>
-      <polygon points="${X0-66},${BY} ${X0},${BY} ${X0},${jawTip} ${X0-12},${jawTip} ${X0-66},${BY+BH+44}" fill="url(#g-jaw)" stroke="#5b6771"/>
-      <rect x="${X0-66}" y="${BY}" width="926" height="${BH}" rx="2" fill="url(#g-steel)" stroke="#5b6771"/>
+    const screw = (x,y) => `<circle cx="${n2(x)}" cy="${y}" r="6" fill="#262d33"/><path d="M${n2(x-4)} ${y}h8M${n2(x)} ${y-4}v8" stroke="#8c979f" stroke-width="1.2"/>`;
+    const slider = `
+        <polygon points="${X0},${BY-PH} ${X0},12 ${X0+16},12 ${X0+64},${BY-PH-48} ${X0+64},${BY-PH}" fill="url(#g-jaw)" stroke="#5b6771"/>
+        <polygon points="${X0},${BY+BH+PH} ${X0},${jawTip} ${X0+26},${jawTip} ${X0+150},${BY+BH+PH+60} ${X0+150},${BY+BH+PH}" fill="url(#g-jaw)" stroke="#5b6771"/>
+        <rect x="${X0}" y="${BY-PH}" width="${n2(PR-X0)}" height="${PH}" rx="3" fill="url(#g-steel2)" stroke="#4d5861"/>
+        <rect x="${X0}" y="${BY+BH}" width="${n2(PR-X0)}" height="${PH}" rx="3" fill="url(#g-steel2)" stroke="#4d5861"/>
+        <rect x="${PL}" y="${BY-PH+4}" width="${n2(PR-PL-8)}" height="${PH-4}" fill="url(#g-steel)" stroke="#5b6771"/>
+        <rect x="${PL}" y="${BY+BH}" width="${n2(PR-PL-8)}" height="${PH-4}" fill="url(#g-steel)" stroke="#5b6771"/>
+        ${screw(PR-22, BY-PH+16)}${screw(PR-22, BY+BH+PH-16)}
+        ${vn}
+        <rect x="${X0+120}" y="${BY-PH-22}" width="44" height="22" rx="4" fill="url(#g-cylDark)" stroke="#333c44"/><rect x="${X0+120}" y="${BY-PH-22}" width="44" height="22" rx="4" fill="url(#g-knurlV)"/>
+        <circle cx="${n2(PR-70)}" cy="${BY+BH+PH+22}" r="24" fill="url(#g-cylDark)" stroke="#333c44"/><circle cx="${n2(PR-70)}" cy="${BY+BH+PH+22}" r="24" fill="url(#g-knurl)"/>
+        <rect x="${X0-10}" y="0" width="${n2(PR-X0+20)}" height="${H}" fill="transparent"/>`;
+
+    const html = `<div class="vscroll" id="vScroll"><svg class="instrument-svg sim-ov vbig" id="simOv" width="${n2(W)}" height="${H}" viewBox="0 0 ${n2(W)} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Calibrador vernier: arrastra la corredera hasta que las mordazas toquen la pieza">
+      <rect x="${X0}" y="${BY+BH+PH+28}" width="${n2(target*Z)}" height="96" rx="4" fill="url(#g-piece)" stroke="#7a4f0c"/>
+      ${target*Z>60?txt(X0+Math.min(target*Z/2, 160), BY+BH+PH+82, "pieza", 18, {fill:"#4d3206", w:700}):""}
+      <polygon points="${X0-64},${BY} ${X0},${BY} ${X0},12 ${X0-16},12 ${X0-64},${BY-48}" fill="url(#g-jaw)" stroke="#5b6771"/>
+      <polygon points="${X0-110},${BY} ${X0},${BY} ${X0},${jawTip} ${X0-26},${jawTip} ${X0-110},${BY+BH+90}" fill="url(#g-jaw)" stroke="#5b6771"/>
+      <rect x="${X0-110}" y="${BY}" width="${n2(BEAM_R-X0+110)}" height="${BH}" rx="3" fill="url(#g-steel)" stroke="#5b6771"/>
       ${sc}
-      <g id="vSlider" style="cursor:grab">
-        <polygon points="${X0},${BY} ${X0},${BY-70} ${X0+7},${BY-70} ${X0+30},${BY-26} ${X0+30},${BY}" fill="url(#g-jaw)" stroke="#5b6771"/>
-        <polygon points="${X0},${BY+BH} ${X0},${jawTip} ${X0+12},${jawTip} ${X0+66},${BY+BH+44} ${X0+66},${BY+BH}" fill="url(#g-jaw)" stroke="#5b6771"/>
-        ${plates}${vn}
-        <rect x="${X0+86}" y="${BY-PH-17}" width="22" height="11" rx="2" fill="url(#g-cylDark)" stroke="#333c44"/><rect x="${X0+86}" y="${BY-PH-17}" width="22" height="11" rx="2" fill="url(#g-knurlV)"/>
-        <circle cx="${n2(PR-34)}" cy="${BY+BH+PH+12}" r="13" fill="url(#g-cylDark)" stroke="#333c44"/><circle cx="${n2(PR-34)}" cy="${BY+BH+PH+12}" r="13" fill="url(#g-knurl)"/>
-        <rect x="${X0-10}" y="${BY-78}" width="${n2(PR-X0+20)}" height="${jawTip-BY+88}" fill="transparent"/>
-      </g>
-      <g id="vHint" fill="#f2a900" opacity=".9"><path d="M0 0l16 -9v6h46v6h-46v6z"/></g>
-    </svg>`;
+      <g id="vSlider" style="cursor:grab;touch-action:none">${slider}</g>
+      <g id="vHint" fill="#f2a900" opacity=".95"><path d="M0 0l26 -15v10h70v10h-70v10z"/></g>
+      <g id="vZero" style="display:none"><path d="${isMM ? `M${XS} ${BY+BH+3} l-9 -15 h18z` : `M${XS} ${BY-3} l-9 15 h18z`}" fill="${HELP}"/></g>
+      <line id="vHelp" x1="0" x2="0" y1="0" y2="0" stroke="${HELP}" stroke-width="3" stroke-dasharray="8,6" style="display:none"/>
+    </svg></div>`;
 
-    // --- lupa ---
-    let lm = "";
-    for(let mm=0; mm<=MAX; mm++){
-      const x = mm*Z, maj = mm%10===0, mid = mm%5===0;
-      lm += vline(x, LB, LB-(maj?50:(mid?40:28)), maj?2.8:2.2);
-      if(maj) lm += txt(x+7, LB-58, mm/10, 28, {a:"start", w:700});
+    function follow(){
+      const c = el("vScroll"); if(!c) return;
+      const x = XS + sim.p*Z, cw = c.clientWidth;
+      const left = x - Math.min(200, Math.max(40, (cw - VW)/2));
+      c.scrollLeft = Math.max(0, left);
     }
-    for(let s=0; s<=96; s++){
-      const x = s*IN/16*Z, w = s%16===0, h = s%8===0, q = s%4===0, e8 = s%2===0;
-      lm += vline(x, LT, LT+(w?50:(h?42:(q?34:(e8?27:19)))), w?2.8:2.2);
-      if(w && s>0) lm += txt(x+7, LT+78, s/16, 28, {a:"start", w:700});
-    }
-    let lv = "";
-    for(let i=0;i<=20;i++){
-      const x = LX0 + i*.95*Z;
-      lv += vline(x, LB, LB+(i%2===0?30:19), 2.2);
-      if(i%2===0) lv += txt(x, LB+54, i/2, 20, {w:700});
-    }
-    lv += txt(LX0+20*.95*Z+26, LB+54, "0.05mm", 17, {a:"start", w:700});
-    for(let i=0;i<=8;i++){
-      const x = LX0 + i*(7/128)*IN*Z;
-      lv += vline(x, LT, LT-(i%4===0?30:19), 2.2);
-      if(i%4===0) lv += txt(x, LT-37, i, 20, {w:700});
-    }
-    lv += txt(LX0+8*(7/128)*IN*Z+40, LT-37, "1/128in", 16, {a:"start", w:600});
-    const zeroMark = isMM
-      ? `<path d="M${LX0} ${LB+3} l-7 -12 h14z" fill="${HELP}"/>`
-      : `<path d="M${LX0} ${LT-3} l-7 12 h14z" fill="${HELP}"/>`;
-    const lupa = `<div class="lupa"><div class="lupa-tag">Lupa · zona de lectura (arriba pulgadas, abajo milímetros)<span class="lupa-swipe"> · desliza la lupa para ver todo el nonio</span></div>
-      <div class="lupa-scroll" id="simLupaScroll"><svg class="instrument-svg lupa-svg lupa-wide" id="simLupa" viewBox="0 0 1000 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ampliación de la escala principal y el nonio">
-        <defs><clipPath id="vClip"><rect x="0" y="${LT}" width="1000" height="${LB-LT}"/></clipPath></defs>
-        <rect x="0" y="0" width="1000" height="300" fill="url(#g-steel2)"/>
-        <rect x="0" y="${LT}" width="1000" height="${LB-LT}" fill="url(#g-steel)"/>
-        <g clip-path="url(#vClip)"><g id="vLupaBeam">${lm}</g></g>
-        <line x1="0" y1="${LT}" x2="1000" y2="${LT}" stroke="#4d5861" stroke-width="1.2"/><line x1="0" y1="${LB}" x2="1000" y2="${LB}" stroke="#4d5861" stroke-width="1.2"/>
-        ${lv}
-        <g id="vZero" style="display:none">${zeroMark}</g>
-        <line id="vHelp" x1="0" x2="0" y1="0" y2="0" stroke="${HELP}" stroke-width="2.4" stroke-dasharray="7,5" style="display:none"/>
-      </svg></div></div>`;
-
     function update(){
       const p = sim.p;
-      setAttr("vSlider", "transform", `translate(${n2(p*S)},0)`);
-      setAttr("vLupaBeam", "transform", `translate(${n2(LX0 - p*Z)},0)`);
+      setAttr("vSlider", "transform", `translate(${n2(p*Z)},0)`);
+      setAttr("vZero", "transform", `translate(${n2(p*Z)},0)`);
       const hint = el("vHint");
-      if(hint){ hint.setAttribute("transform", `translate(${n2(PR+p*S+16)},${BY+BH+PH+14})`); hint.style.display = seated() ? "none" : ""; }
+      if(hint){ hint.setAttribute("transform", `translate(${n2(PR+p*Z+20)},${BY+BH+PH+30})`); hint.style.display = seated() ? "none" : ""; }
       const zm = el("vZero"); if(zm) zm.style.display = help ? "" : "none";
       const h = el("vHelp");
       if(h){
         if(!help){ h.style.display = "none"; }
         else if(isMM){
-          const n = ((Math.round(p/.05) % 20) + 20) % 20, x = LX0 + n*.95*Z;
-          h.setAttribute("x1", x); h.setAttribute("x2", x); h.setAttribute("y1", LB-56); h.setAttribute("y2", LB+34); h.style.display = "";
+          const n = ((Math.round(p/.05) % 20) + 20) % 20, x = XS + p*Z + n*.95*Z;
+          h.setAttribute("x1", n2(x)); h.setAttribute("x2", n2(x)); h.setAttribute("y1", BY+BH-60); h.setAttribute("y2", BY+BH+34); h.style.display = "";
         } else {
-          const n = ((Math.round(p/IN*128) % 8) + 8) % 8, x = LX0 + n*(7/128)*IN*Z;
-          h.setAttribute("x1", x); h.setAttribute("x2", x); h.setAttribute("y1", LT-34); h.setAttribute("y2", LT+56); h.style.display = "";
+          const n = ((Math.round(p/IN*128) % 8) + 8) % 8, x = XS + p*Z + n*(7/128)*IN*Z;
+          h.setAttribute("x1", n2(x)); h.setAttribute("x2", n2(x)); h.setAttribute("y1", BY-34); h.setAttribute("y2", BY+60); h.style.display = "";
         }
       }
+      follow();
     }
     const seated = () => sim.p - target < 1e-7;
     return {
-      html: overview + lupa, update, seated, touch: "pan-y",
-      drag(dx){ sim.p = Math.min(MAX, Math.max(target, sim.p + dx/S)); },
+      html, update, seated, touch: "pan-x pan-y", dragTarget: "vSlider",
+      drag(dx){ sim.p = Math.min(MAX, Math.max(target, sim.p + 3*dx/Z)); },
       closeTo: target, openTo: Math.min(MAX, target + 28),
       labels: { close: "Cerrar las mordazas sobre la pieza", open: "Abrir",
         open_msg: "Mordazas abiertas.",
@@ -665,9 +648,9 @@
   function buildMicrometer(target, unit, help){
     const isMM = unit === "mm", IN = MM_PER_IN;
     const pitch = isMM ? .5 : .025*IN, div = isMM ? 50 : 25;     // avance por vuelta (mm) y divisiones del tambor
-    const S = 8, AY = 150, XA = 150, XR = XA + 25*S + 30, XS0 = XR + 90, MAX = 25;
+    const S = 8, AY = 150, XA = 150, XR = XA + 25.4*S + 30, XS0 = XR + 90, MAX = isMM ? 25 : 25.4;
     const Z = 30, LX = 340, YC = 160, RL = 114;
-    if(sim.p === null) sim.p = Math.min(MAX, target + 5.2);
+    if(sim.p === null) sim.p = MAX;
     const reading = p => ((((p % pitch) + pitch) % pitch) / pitch) * div;
 
     // --- vista general ---
@@ -675,7 +658,7 @@
     if(isMM){
       for(let k=0;k<=50;k++){ const x = XS0 + k*.5*S; sl += k%2===0 ? vline(x, AY, AY-(k%10===0?11:7), .7) : vline(x, AY, AY+6, .7); if(k%10===0) sl += txt(x, AY-13, k/2, 8.5); }
     } else {
-      for(let k=0;k<=39;k++){ const x = XS0 + k*.025*IN*S; sl += vline(x, AY, AY-(k%4===0?11:6), .7); if(k%4===0) sl += txt(x, AY-13, k/4, 8.5); }
+      for(let k=0;k<=40;k++){ const x = XS0 + k*.025*IN*S; sl += vline(x, AY, AY-(k%4===0?11:6), .7); if(k%4===0) sl += txt(x, AY-13, k/4, 8.5); }
     }
     const overview = `<svg class="instrument-svg sim-ov" id="simOv" viewBox="0 0 1000 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Micrómetro de exteriores: gira el tambor hasta que el husillo toque la pieza">
       <path d="M${XA-64} ${AY-38} L${XA-10} ${AY-38} L${XA-10} ${AY+44} A${(XR-XA+10)/2} 104 0 0 0 ${XR} ${AY+44} L${XR} ${AY-38} L${XR+64} ${AY-38} L${XR+64} ${AY+62} A${(XR-XA+128)/2} 172 0 0 1 ${XA-64} ${AY+62} Z" fill="url(#g-frame)" stroke="#22303c" stroke-width="1.5"/>
@@ -709,7 +692,7 @@
         else ls += vline(x, YC, YC+28, 2.2);
       }
     } else {
-      for(let k=0;k<=39;k++){
+      for(let k=0;k<=40;k++){
         const x = k*.025*IN*Z;
         ls += vline(x, YC, YC-(k%4===0?46:28), 2.2);
         if(k%4===0) ls += txt(x, YC-56, k/4, 24, {w:600});
@@ -747,7 +730,7 @@
         const d = axis === "y" ? (dyPx/9)*(pitch/div) : dx/Z;
         sim.p = Math.min(MAX, Math.max(target, sim.p + d));
       },
-      closeTo: target, openTo: Math.min(MAX, target + 5.2),
+      closeTo: target, openTo: MAX,
       labels: { close: "Girar el tambor hasta el contacto", open: "Abrir",
         open_msg: "Husillo abierto.",
         seated_msg: "Clic del trinquete: husillo en contacto con la pieza." }
@@ -854,12 +837,21 @@
     if(!svg) return;
     let last = null, axis = null, start = null;
     svg.style.touchAction = sim.api.touch;
+    let pan = null;
     svg.addEventListener("pointerdown", e => {
+      const dt = sim.api.dragTarget && el(sim.api.dragTarget);
+      if(dt && !dt.contains(e.target)){
+        // fuera de la corredera: con ratón se arrastra la vista; en pantalla táctil se desliza sola
+        const c = svg.parentElement;
+        if(e.pointerType === "mouse" && c){ pan = { x: e.clientX, left: c.scrollLeft, c }; e.preventDefault(); }
+        return;
+      }
       cancelAnimationFrame(sim.raf);
       last = { x: e.clientX, y: e.clientY }; start = last; axis = null;
       try{ svg.setPointerCapture(e.pointerId); }catch(err){ /* sin captura: el arrastre sigue funcionando dentro del dibujo */ }
     });
     svg.addEventListener("pointermove", e => {
+      if(pan){ pan.c.scrollLeft = pan.left - (e.clientX - pan.x); return; }
       if(!last) return;
       const r = svg.getBoundingClientRect(), k = svg.viewBox.baseVal.width / r.width;
       if(!axis){
@@ -874,8 +866,9 @@
       simRefresh();
       e.preventDefault();
     });
-    const end = () => { last = null; };
+    const end = () => { last = null; pan = null; };
     svg.addEventListener("pointerup", end);
+    svg.addEventListener("pointerleave", () => { pan = null; });
     svg.addEventListener("pointercancel", end);
   }
 
