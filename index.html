@@ -666,25 +666,77 @@
 
   // ===== Calibrador vernier =====
   function buildVernier(target, unit, help){
-    // Calibrador completo dibujado a escala de lectura (sin lupa): la regla mide 24 px por mm,
-    // así que el instrumento es más ancho que la pantalla y la vista se desplaza siguiendo a la
-    // corredera. La regla tiene la escala en pulgadas arriba y en milímetros abajo; el nonio va
-    // en la corredera, que abraza la regla por arriba y por abajo.
-    const Z = 24, X0 = 120, XS = X0 + 12*Z, MAX = 150;
-    const BY = 120, BH = 170, PH = 56, H = 486;
-    const IN = MM_PER_IN, isMM = unit === "mm";
+    // Dos vistas, como el micrómetro:
+    //  1) Vista general: el calibrador completo y a escala reducida, con su regla, la corredera,
+    //     las mordazas de exteriores (abajo, sujetan la pieza), las de interiores (arriba),
+    //     la rueda para el pulgar, el tornillo de fijación y la varilla de profundidad.
+    //  2) Lupa: la regla y el nonio a escala de lectura (24 px por mm); sigue a la corredera.
+    const IN = MM_PER_IN, isMM = unit === "mm", MAX = 150;
     if(sim.p === null) sim.p = Math.min(MAX, target + 28);
     const RM = VRES.mm[state.vres.mm], RI = VRES.in[state.vres.in];
     const SM = RM.div*(RM.n - 1)/RM.n;                     // separación entre líneas del nonio mm (mm)
     const SI = RI.div*(RI.n - 1)/RI.n;                     // separación entre líneas del nonio en pulgadas (in)
+
+    // ================= 1) vista general =================
+    const S = 3.6, OX = 150, OW = 1000, OH = 330;
+    const BT = 112, BB = 152, PT = 94, PB = 170;          // regla (BT–BB) y corredera (PT–PB)
+    const BEND = OX + 214*S, SL = 66*S;                    // extremo de la regla y largo de la corredera
+    let os = "";
+    for(let mm=0; mm<=Math.floor((BEND-OX)/S)-3; mm++){
+      const x = OX + mm*S, maj = mm%10===0, mid = mm%5===0;
+      os += vline(x, BB, BB-(maj?11:(mid?8:5)), maj?.9:.6);
+      if(maj && mm > 0) os += txt(x, BB-13.5, mm/10, 8.5, {w:600});
+    }
+    for(let s16=0; s16<=Math.floor((BEND-OX)/S/IN*16)-1; s16++){
+      const x = OX + s16*IN/16*S, w = s16%16===0, h = s16%8===0;
+      os += vline(x, BT, BT+(w?10:(h?7:4)), w?.9:.55);
+      if(w && s16 > 0) os += txt(x, BT+19, s16/16, 8.5, {w:600});
+    }
+    os += txt(OX+6, BB-13.5, "cm", 7, {a:"start", fill:"#56626c"}) + txt(OX+6, BT+19, "in", 7, {a:"start", fill:"#56626c"});
+    // nonio en la vista general (mismas divisiones, a escala reducida)
+    let on = "";
+    for(let i=0;i<=RM.n;i++){ const x = OX + i*SM*S; on += vline(x, BB, BB+(i%RM.lab===0?6:3.5), .5); }
+    for(let i=0;i<=RI.n;i++){ const x = OX + i*SI*IN*S; on += vline(x, BT, BT-(i%RI.lab===0?6:3.5), .5); }
+    const VWo = Math.max(RM.n*SM, RI.n*SI*IN)*S;
+
+    const knurlWheel = (cx, cy, r) => `<circle cx="${n2(cx)}" cy="${cy}" r="${r}" fill="url(#g-cylDark)" stroke="#2c343b"/><circle cx="${n2(cx)}" cy="${cy}" r="${r}" fill="url(#g-knurl)"/><circle cx="${n2(cx)}" cy="${cy}" r="3" fill="#20282f"/>`;
+    const ovSlider = `
+      <polygon points="${OX},${PB} ${OX+46},${PB} ${OX+46},${PB+38} ${OX+30},${PB+92} ${OX+15},${PB+136} ${OX+5},${PB+142} ${OX},${PB+128}" fill="url(#g-jaw)" stroke="#4d5861"/>
+      <polygon points="${OX},${PT} ${OX+26},${PT} ${OX+26},${PT-8} ${OX+12},${PT-30} ${OX+4},${PT-46} ${OX+1},${PT-47} ${OX},${PT-38}" fill="url(#g-jaw)" stroke="#4d5861"/>
+      <path d="M${OX} ${PT} h${n2(SL)} v${PB-PT} h-${n2(SL)} v-${PB-BB} h${n2(SL-30)} v-${BB-BT} h-${n2(SL-30)} z" fill="url(#g-steel2)" stroke="#3f4a53" fill-rule="evenodd"/>
+      <rect x="${OX}" y="${BB}" width="${n2(VWo+18)}" height="10" fill="url(#g-steel)" stroke="#5b6771" stroke-width=".6"/>
+      <rect x="${OX}" y="${BT-10}" width="${n2(VWo+18)}" height="10" fill="url(#g-steel)" stroke="#5b6771" stroke-width=".6"/>
+      ${on}
+      <rect x="${n2(OX+SL-72)}" y="${PT-13}" width="18" height="13" rx="2" fill="url(#g-cylDark)" stroke="#2c343b"/><rect x="${n2(OX+SL-72)}" y="${PT-13}" width="18" height="13" rx="2" fill="url(#g-knurlV)"/>
+      <rect x="${n2(OX+SL-58)}" y="${PB}" width="12" height="6" fill="url(#g-cyl)" stroke="#4d5861"/>
+      ${knurlWheel(OX+SL-52, PB+17, 12)}
+      <rect x="${OX-4}" y="${PT-70}" width="${n2(SL+8)}" height="${PB-PT+216}" fill="transparent"/>`;
+
+    const overview = `<svg class="instrument-svg sim-ov" id="simOv" viewBox="0 0 ${OW} ${OH}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Calibrador vernier: arrastra la corredera hasta que las mordazas de exteriores toquen la pieza">
+      <rect x="${OX}" y="${PB+48}" width="${n2(target*S)}" height="74" rx="3" fill="url(#g-piece)" stroke="#7a4f0c"/>
+      ${target*S>46?txt(OX+target*S/2, PB+90, "pieza", 12, {fill:"#4d3206", w:700}):""}
+      <rect id="voRod" x="${n2(BEND)}" y="${(BT+BB)/2-3}" width="0" height="6" fill="url(#g-cyl)" stroke="#4d5861" stroke-width=".7"/>
+      <rect x="${OX-48}" y="${BT}" width="${n2(BEND-OX+48)}" height="${BB-BT}" rx="2" fill="url(#g-steel)" stroke="#5b6771"/>
+      ${os}
+      <polygon points="${OX},${PB} ${OX-46},${PB} ${OX-46},${PB+38} ${OX-30},${PB+92} ${OX-15},${PB+136} ${OX-5},${PB+142} ${OX},${PB+128}" fill="url(#g-jaw)" stroke="#4d5861"/>
+      <polygon points="${OX},${PT} ${OX-26},${PT} ${OX-26},${PT-8} ${OX-12},${PT-30} ${OX-4},${PT-46} ${OX-1},${PT-47} ${OX},${PT-38}" fill="url(#g-jaw)" stroke="#4d5861"/>
+      <rect x="${OX-52}" y="${PT}" width="52" height="${PB-PT}" rx="3" fill="url(#g-steel2)" stroke="#3f4a53"/>
+      <g id="voSlider" style="cursor:grab">${ovSlider}</g>
+      ${txt(OX-36, PT-22, "mordazas de", 10, {a:"end", fill:"#8ea0b3"})}${txt(OX-36, PT-10, "interiores", 10, {a:"end", fill:"#8ea0b3"})}
+      ${txt(OX-54, PB+70, "mordazas de", 10, {a:"end", fill:"#8ea0b3"})}${txt(OX-54, PB+82, "exteriores", 10, {a:"end", fill:"#8ea0b3"})}
+      <g id="vHint" fill="#f2a900" opacity=".95"><path d="M0 0l16 -9v6h44v6h-44v6z"/></g>
+    </svg>`;
+
+    // ================= 2) lupa sobre la regla y el nonio =================
+    const Z = 24, X0 = 120, XS = X0 + 12*Z;
+    const BY = 120, BH = 170, PH = 56;
+    const LY0 = BY - PH - 14, LH = BH + 2*PH + 30;          // franja visible de la lupa
     const VWM = RM.n*SM*Z, VWI = RI.n*SI*IN*Z;             // largo de cada nonio (px)
     const VW = Math.max(VWM, VWI);
     const PL = XS - 30, PR = XS + VW + 96;                 // extremos de las placas del nonio
-    const BEAM_R = XS + (MAX + 4)*Z + (PR - X0);           // la regla alcanza a la corredera abierta
+    const BEAM_R = XS + (MAX + 4)*Z + (PR - X0);
     const W = BEAM_R + 40;
-    const jawTip = H - 14;
 
-    // --- regla ---
     let sc = "";
     for(let mm=0; mm<=MAX+(PR-XS)/Z; mm++){
       const x = XS + mm*Z, maj = mm%10===0, mid = mm%5===0;
@@ -694,7 +746,6 @@
     }
     const beamIn = (MAX+(PR-XS)/Z)/IN;
     if(state.vres.in === "128"){
-      // regla en dieciseisavos de pulgada
       for(let s=0; s<=Math.floor(beamIn*16); s++){
         const x = XS + s*IN/16*Z, w = s%16===0, h = s%8===0, q = s%4===0, e8 = s%2===0;
         sc += vline(x, BY, BY+(w?50:(h?42:(q?34:(e8?27:19)))), w?2.6:1.8);
@@ -702,7 +753,6 @@
         else if(h) sc += txt(x, BY+62, "½", 16, {w:600, fill:"#3d4852"});
       }
     } else {
-      // regla en divisiones de 0.025 in, numerada cada 0.100 in
       for(let s=0; s<=Math.floor(beamIn*40); s++){
         const x = XS + s*.025*IN*Z, w = s%40===0, t = s%4===0, h = s%2===0;
         sc += vline(x, BY, BY+(w?50:(t?40:(h?29:21))), w?2.6:1.8);
@@ -713,16 +763,13 @@
     sc += txt(XS-14, BY+BH-12, "mm", 16, {a:"end", w:700, fill:"#3d4852"});
     sc += txt(XS-14, BY+26, "in", 16, {a:"end", w:700, fill:"#3d4852"});
 
-    // --- nonio (en la corredera) ---
     let vn = "";
-    // nonio mm: n divisiones; cada número = 0.1 mm (0 a 10)
     for(let i=0;i<=RM.n;i++){
       const x = XS + i*SM*Z, labeled = i%RM.lab===0;
       vn += vline(x, BY+BH, BY+BH+(labeled?30:19), RM.n > 20 ? 1.6 : 2);
       if(labeled) vn += txt(x, BY+BH+50, i/RM.lab, 19, {w:700});
     }
     vn += txt(XS+VWM+34, BY+BH+24, RM.label, 15, {a:"start", w:700});
-    // nonio en pulgadas: 8 divisiones de 1/128 in, o 25 de 0.001 in
     for(let i=0;i<=RI.n;i++){
       const x = XS + i*SI*IN*Z, labeled = i%RI.lab===0;
       vn += vline(x, BY, BY-(labeled?30:19), 2);
@@ -731,46 +778,45 @@
     vn += txt(XS+VWI+40, BY-36, state.vres.in === "128" ? "1/128 in" : "0.001 in", 15, {a:"start", w:700});
 
     const screw = (x,y) => `<circle cx="${n2(x)}" cy="${y}" r="6" fill="#262d33"/><path d="M${n2(x-4)} ${y}h8M${n2(x)} ${y-4}v8" stroke="#8c979f" stroke-width="1.2"/>`;
-    const slider = `
-        <polygon points="${X0},${BY-PH} ${X0},12 ${X0+16},12 ${X0+64},${BY-PH-48} ${X0+64},${BY-PH}" fill="url(#g-jaw)" stroke="#5b6771"/>
-        <polygon points="${X0},${BY+BH+PH} ${X0},${jawTip} ${X0+26},${jawTip} ${X0+150},${BY+BH+PH+60} ${X0+150},${BY+BH+PH}" fill="url(#g-jaw)" stroke="#5b6771"/>
+    const lSlider = `
         <rect x="${X0}" y="${BY-PH}" width="${n2(PR-X0)}" height="${PH}" rx="3" fill="url(#g-steel2)" stroke="#4d5861"/>
         <rect x="${X0}" y="${BY+BH}" width="${n2(PR-X0)}" height="${PH}" rx="3" fill="url(#g-steel2)" stroke="#4d5861"/>
         <rect x="${PL}" y="${BY-PH+4}" width="${n2(PR-PL-8)}" height="${PH-4}" fill="url(#g-steel)" stroke="#5b6771"/>
         <rect x="${PL}" y="${BY+BH}" width="${n2(PR-PL-8)}" height="${PH-4}" fill="url(#g-steel)" stroke="#5b6771"/>
         ${screw(PR-22, BY-PH+16)}${screw(PR-22, BY+BH+PH-16)}
         ${vn}
-        <rect x="${X0+120}" y="${BY-PH-22}" width="44" height="22" rx="4" fill="url(#g-cylDark)" stroke="#333c44"/><rect x="${X0+120}" y="${BY-PH-22}" width="44" height="22" rx="4" fill="url(#g-knurlV)"/>
-        <circle cx="${n2(PR-70)}" cy="${BY+BH+PH+22}" r="24" fill="url(#g-cylDark)" stroke="#333c44"/><circle cx="${n2(PR-70)}" cy="${BY+BH+PH+22}" r="24" fill="url(#g-knurl)"/>
-        <rect x="${X0-10}" y="0" width="${n2(PR-X0+20)}" height="${H}" fill="transparent"/>`;
+        <rect x="${X0-10}" y="${LY0}" width="${n2(PR-X0+20)}" height="${LH}" fill="transparent"/>`;
 
-    const html = `<div class="vscroll" id="vScroll"><svg class="instrument-svg sim-ov vbig" id="simOv" width="${n2(W)}" height="${H}" viewBox="0 0 ${n2(W)} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Calibrador vernier: arrastra la corredera hasta que las mordazas toquen la pieza">
-      <rect x="${X0}" y="${BY+BH+PH+28}" width="${n2(target*Z)}" height="96" rx="4" fill="url(#g-piece)" stroke="#7a4f0c"/>
-      ${target*Z>60?txt(X0+Math.min(target*Z/2, 160), BY+BH+PH+82, "pieza", 18, {fill:"#4d3206", w:700}):""}
-      <polygon points="${X0-64},${BY} ${X0},${BY} ${X0},12 ${X0-16},12 ${X0-64},${BY-48}" fill="url(#g-jaw)" stroke="#5b6771"/>
-      <polygon points="${X0-110},${BY} ${X0},${BY} ${X0},${jawTip} ${X0-26},${jawTip} ${X0-110},${BY+BH+90}" fill="url(#g-jaw)" stroke="#5b6771"/>
+    const lupa = `<div class="lupa"><div class="lupa-tag">Lupa · regla y nonio (sigue a la corredera; arrástrala aquí para el ajuste fino)</div>
+      <div class="vscroll" id="vScroll"><svg class="instrument-svg lupa-svg vbig" id="simLupa" width="${n2(W)}" height="${LH}" viewBox="0 ${LY0} ${n2(W)} ${LH}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ampliación de la regla y el nonio">
       <rect x="${X0-110}" y="${BY}" width="${n2(BEAM_R-X0+110)}" height="${BH}" rx="3" fill="url(#g-steel)" stroke="#5b6771"/>
       ${sc}
-      <g id="vSlider" style="cursor:grab;touch-action:none">${slider}</g>
-      <g id="vHint" fill="#f2a900" opacity=".95"><path d="M0 0l26 -15v10h70v10h-70v10z"/></g>
+      <g id="vSlider" style="cursor:grab;touch-action:none">${lSlider}</g>
       <g id="vZero" style="display:none"><path d="${isMM ? `M${XS} ${BY+BH+3} l-9 -15 h18z` : `M${XS} ${BY-3} l-9 15 h18z`}" fill="${HELP}"/></g>
       <line id="vHelp" x1="0" x2="0" y1="0" y2="0" stroke="${HELP}" stroke-width="3" stroke-dasharray="8,6" style="display:none"/>
-    </svg></div>`;
+    </svg></div></div>`;
 
+    // En pantallas angostas la lupa se reduce (hasta 55 %) para que quepa el nonio completo.
+    let kL = 1;
     function follow(){
       const c = el("vScroll"); if(!c) return;
-      const x = XS + sim.p*Z, cw = c.clientWidth;
-      const left = x - Math.min(200, Math.max(40, (cw - VW)/2));
+      const cw = c.clientWidth;
+      const k = cw ? Math.min(1, Math.max(.55, cw/(VW + 150))) : 1;
+      if(k !== kL){ kL = k; setAttr("simLupa", "width", n2(W*k)); setAttr("simLupa", "height", n2(LH*k)); }
+      const x = (XS + sim.p*Z)*kL;
+      const left = x - Math.min(200*kL, Math.max(30, (cw - VW*kL)/2));
       c.scrollLeft = Math.max(0, left);
     }
     let lastMM = Math.floor(sim.p);
     function update(){
       const p = sim.p;
       if(Math.floor(p) !== lastMM){ tickThrottled("slide", 35); lastMM = Math.floor(p); }
+      setAttr("voSlider", "transform", `translate(${n2(p*S)},0)`);
+      setAttr("voRod", "width", n2(p*S));
       setAttr("vSlider", "transform", `translate(${n2(p*Z)},0)`);
       setAttr("vZero", "transform", `translate(${n2(p*Z)},0)`);
       const hint = el("vHint");
-      if(hint){ hint.setAttribute("transform", `translate(${n2(PR+p*Z+20)},${BY+BH+PH+30})`); hint.style.display = seated() ? "none" : ""; }
+      if(hint){ hint.setAttribute("transform", `translate(${n2(OX+p*S+SL+12)},${PB+70})`); hint.style.display = seated() ? "none" : ""; }
       const zm = el("vZero"); if(zm) zm.style.display = help ? "" : "none";
       const h = el("vHelp");
       if(h){
@@ -787,10 +833,14 @@
       follow();
     }
     const seated = () => sim.p - target < 1e-7;
+    const clampP = v => Math.min(MAX, Math.max(target, v));
     return {
-      html, update, seated, touch: "pan-x pan-y", dragTarget: "vSlider",
-      drag(dx){ sim.p = Math.min(MAX, Math.max(target, sim.p + 3*dx/Z)); },
-      key(dir, big){ sim.p = Math.min(MAX, Math.max(target, sim.p + dir*(big ? 5 : .5))); },
+      html: overview + lupa, update, seated,
+      touch: "pan-y",                                        // vista general: arrastre horizontal mueve la corredera
+      lupaTouch: "pan-x pan-y", lupaDragTarget: "vSlider",   // lupa: fuera de la corredera se desplaza la vista
+      drag(dx){ sim.p = clampP(sim.p + dx/S); },
+      lupaDrag(dx){ sim.p = clampP(sim.p + dx/Z); },
+      key(dir, big){ sim.p = clampP(sim.p + dir*(big ? 5 : .5)); },
       contactSound: true,
       closeTo: target, openTo: Math.min(MAX, target + 28),
       labels: { close: "Cerrar las mordazas sobre la pieza", open: "Abrir",
@@ -802,14 +852,28 @@
   // ===== Sonido del instrumento (sintetizado con Web Audio, sin archivos) =====
   const snd = { ctx: null, last: 0 };
   function sndOn(){ const t = el("soundToggle"); return !t || t.checked; }
-  function audioCtx(){
-    if(!sndOn()) return null;
+  // Los navegadores (sobre todo Safari en iPhone) solo dejan encender el audio dentro de un toque o
+  // clic, no durante un arrastre. Por eso el audio se "desbloquea" en el primer toque, clic o tecla.
+  function unlockAudio(){
+    if(!sndOn()) return;
     try{
-      const AC = window.AudioContext || window.webkitAudioContext; if(!AC) return null;
+      const AC = window.AudioContext || window.webkitAudioContext; if(!AC) return;
+      // En iPhone, que el sonido se escuche aunque el interruptor de silencio esté activado.
+      try{ if(navigator.audioSession) navigator.audioSession.type = "playback"; }catch(e){ /* no disponible */ }
       snd.ctx = snd.ctx || new AC();
-      if(snd.ctx.state === "suspended") snd.ctx.resume();
-      return snd.ctx;
-    }catch(e){ return null; }
+      if(snd.ctx.state !== "running") snd.ctx.resume();
+      if(!snd.unlocked){
+        const b = snd.ctx.createBuffer(1, 1, 22050), s = snd.ctx.createBufferSource();
+        s.buffer = b; s.connect(snd.ctx.destination); s.start(0);
+        snd.unlocked = true;
+      }
+    }catch(e){ /* sin audio: el simulador funciona igual */ }
+  }
+  ["pointerdown", "touchend", "click", "keydown"].forEach(ev => document.addEventListener(ev, unlockAudio, { capture: true, passive: true }));
+  function audioCtx(){
+    if(!sndOn() || !snd.ctx) return null;
+    if(snd.ctx.state !== "running"){ try{ snd.ctx.resume(); }catch(e){} }
+    return snd.ctx;
   }
   // "tick": roce del tambor al pasar cada división; "ratchet": clic metálico del trinquete
   function playClick(kind){
@@ -831,7 +895,7 @@
     for(let i=0;i<d.length;i++) d[i] = (Math.random()*2-1) * Math.pow(1 - i/d.length, rat ? 4 : 7);
     const src = c.createBufferSource(); src.buffer = buf;
     const bp = c.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = rat ? 3200 : 5200; bp.Q.value = rat ? 3 : 1.6;
-    const g = c.createGain(); g.gain.value = rat ? .55 : .16;
+    const g = c.createGain(); g.gain.value = rat ? .7 : .32;
     src.connect(bp); bp.connect(g); g.connect(c.destination); src.start(now);
     if(rat){
       const o = c.createOscillator(), og = c.createGain();
@@ -1068,13 +1132,17 @@
     sim.raf = requestAnimationFrame(step);
   }
 
-  function bindDrag(svg, fn){
+  // opts.touch: gestos táctiles que maneja el navegador (desplazar la página); opts.dragTarget: si se
+  // indica, solo esa parte del dibujo se arrastra y el resto desplaza la vista.
+  function bindDrag(svg, fn, opts){
     if(!svg) return;
+    opts = opts || {};
     let last = null, axis = null, start = null;
-    svg.style.touchAction = sim.api.touch;
+    svg.style.touchAction = opts.touch || "none";
     let pan = null;
     svg.addEventListener("pointerdown", e => {
-      const dt = sim.api.dragTarget && el(sim.api.dragTarget);
+      unlockAudio();
+      const dt = opts.dragTarget && el(opts.dragTarget);
       if(dt && !dt.contains(e.target)){
         // fuera de la corredera: con ratón se arrastra la vista; en pantalla táctil se desliza sola
         const c = svg.parentElement;
@@ -1115,8 +1183,8 @@
     el("svgHolder").innerHTML = api.html +
       `<div class="simbar"><span class="simstatus" id="simStatus" aria-live="polite"></span>
         <span class="simbtns"><button class="btn" type="button" id="simClose">${api.labels.close}</button><button class="btn" type="button" id="simOpen">${api.labels.open}</button></span></div>`;
-    bindDrag(el("simOv"), (dx, dy, axis) => api.drag(dx, dy, axis));
-    if(api.lupaDrag) bindDrag(el("simLupa"), (dx, dy, axis) => api.lupaDrag(dx, dy, axis));
+    bindDrag(el("simOv"), (dx, dy, axis) => api.drag(dx, dy, axis), { touch: api.touch, dragTarget: api.dragTarget });
+    if(api.lupaDrag) bindDrag(el("simLupa"), (dx, dy, axis) => api.lupaDrag(dx, dy, axis), { touch: api.lupaTouch || api.touch, dragTarget: api.lupaDragTarget });
     el("simClose").addEventListener("click", () => simAnimate(api.closeTo));
     el("simOpen").addEventListener("click", () => simAnimate(api.openTo));
     // Manejo con teclado: Tab hasta el instrumento, flechas para moverlo (Mayús = paso largo),
@@ -1668,7 +1736,7 @@
   }
   el("bigTextToggle").addEventListener("change", e=>{ prefs.bigText = e.target.checked; savePrefs(); applyPrefs(); });
   el("cbToggle").addEventListener("change", e=>{ prefs.cb = e.target.checked; savePrefs(); applyPrefs(); });
-  el("soundToggle").addEventListener("change", e=>{ prefs.sound = e.target.checked; savePrefs(); });
+  el("soundToggle").addEventListener("change", e=>{ prefs.sound = e.target.checked; savePrefs(); if(e.target.checked){ unlockAudio(); setTimeout(()=>playClick("ratchet"), 40); } });  // al activarlo suena un clic de prueba
   function onResChange(){
     state.vres = { mm: el("resMM").value, in: el("resIN").value };
     prefs.vres = state.vres; savePrefs();
