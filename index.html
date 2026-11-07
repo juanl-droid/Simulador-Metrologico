@@ -72,7 +72,7 @@
     padding-left:env(safe-area-inset-left);
     padding-right:env(safe-area-inset-right);
   }
-  .wrap{max-width:1180px;margin:0 auto;padding:28px 20px 60px;}
+  .wrap{max-width:1480px;margin:0 auto;padding:18px 14px 60px;}
   header{margin-bottom:22px;}
   .eyebrow{
     font-family:'IBM Plex Mono', monospace;
@@ -140,7 +140,7 @@
   .btn.primary:hover{background:#ffbf2e;}
   .btn:disabled{opacity:.4;cursor:not-allowed;}
 
-  .grid2{display:grid;grid-template-columns:1.55fr 1fr;gap:18px;}
+  .grid2{display:grid;grid-template-columns:1.75fr 1fr;gap:14px;}
   @media (max-width:880px){.grid2{grid-template-columns:1fr;}}
 
   .grid2 > .panel{min-width:0;}
@@ -252,17 +252,71 @@
   .dlg h2{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:24px;margin:0 0 8px;color:#f4f7f9;}
   .dlg p{font-size:14px;line-height:1.5;margin:0 0 14px;}
   .dlg .row{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;}
+
+  /* ---------- botones con relieve (aspecto de botón físico) ---------- */
+  .btn, .tab, .seg button{
+    background:linear-gradient(#34495d,#233343);color:#e6edf2;
+    border:1px solid #4b637a;border-bottom-color:#0d151c;border-radius:6px;
+    box-shadow:0 3px 0 #0b1118, 0 4px 8px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.14);
+    transition:transform .06s, box-shadow .06s, background .15s;
+  }
+  .btn:hover, .tab:hover, .seg button:hover{background:linear-gradient(#3d556c,#29394a);border-color:var(--amber-dim);}
+  .btn:active, .tab:active, .seg button:active{transform:translateY(3px);box-shadow:0 0 0 #0b1118, inset 0 2px 5px rgba(0,0,0,.45);}
+  .btn.primary, .tab.active, .seg button.active{
+    background:linear-gradient(#ffcf5c,#e39c00);color:#1a1305;border-color:#ffc12e;border-bottom-color:#8a5e00;
+    box-shadow:0 3px 0 #7a5400, 0 4px 8px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.45);
+  }
+  .btn.primary:hover, .tab.active:hover, .seg button.active:hover{background:linear-gradient(#ffd977,#f0a800);}
+  .btn:disabled, .seg button:disabled{transform:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);}
+  .seg{border:0;gap:6px;overflow:visible;padding-bottom:3px;}
+  .scaleSeg{gap:8px;}
+  .tabs{padding-bottom:3px;}
+  .simbtns .btn{padding:11px 18px;font-size:15px;font-weight:600;}
+  .simbtns #simClose{background:linear-gradient(#4f9a72,#2f7350);border-color:#6cbb90;border-bottom-color:#1c4a33;box-shadow:0 3px 0 #163a28,0 4px 8px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.25);color:#fff;}
+  .simbtns #simClose:active{box-shadow:0 0 0 #163a28, inset 0 2px 5px rgba(0,0,0,.45);}
+
+  /* ---------- lupa: número de pulgada / mm fijo en el borde ---------- */
+  .lupa-wrap{position:relative;}
+  .vbadge{position:absolute;left:6px;z-index:2;pointer-events:none;
+    background:rgba(22,32,43,.88);color:#ffd36b;border:1px solid var(--amber-dim);border-radius:4px;
+    font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:13px;padding:2px 7px;}
+
+  /* ---------- zona de respuesta destacada ---------- */
+  .actionbar{background:linear-gradient(rgba(242,169,0,.18),rgba(242,169,0,.06));
+    border:2px solid var(--amber);border-radius:9px;padding:12px;box-shadow:0 0 0 4px rgba(242,169,0,.08);}
+  .answer-label{display:block;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:18px;color:#ffd36b;margin:0 0 8px;letter-spacing:.02em;}
+  .actionbar .reading-row{gap:8px;flex-wrap:wrap;}
+  .actionbar .reading-row input{flex:1 1 150px;min-width:130px;}
+  .actionbar #submitBtn{flex:2 1 120px;}
+  .actionbar #newPieceBtn{flex:1 1 100px;}
+  .actionbar .reading-row input[type=number], .actionbar .reading-row input[type=text]{
+    font-size:28px;padding:12px 14px;background:#0e161e;border:2px solid var(--amber-dim);color:#ffc533;border-radius:6px;}
+  .actionbar .reading-row input:focus{border-color:#ffd36b;box-shadow:0 0 0 3px rgba(242,169,0,.35);}
+  .actionbar .unit-suffix{font-size:20px;min-width:52px;border:2px solid var(--grid);}
+  .actionbar #submitBtn{font-size:17px;padding:12px 22px;font-weight:700;}
+  .actionbar #newPieceBtn{font-size:15px;padding:12px 16px;}
+
   @media (max-width:880px){
-    body{padding-bottom:calc(132px + env(safe-area-inset-bottom));}
-    .actionbar{position:fixed;left:0;right:0;bottom:0;z-index:20;margin:0;
-      padding:8px 12px calc(10px + env(safe-area-inset-bottom));
-      background:rgba(22,32,43,.97);border-top:1px solid var(--amber-dim);box-shadow:0 -6px 18px rgba(0,0,0,.4);}
+    body{padding-bottom:calc(150px + env(safe-area-inset-bottom));}
+    .actionbar{position:fixed;left:0;right:0;bottom:0;z-index:20;margin:0;border-radius:0;border:0;
+      border-top:3px solid var(--amber);
+      padding:8px 10px calc(10px + env(safe-area-inset-bottom));
+      background:linear-gradient(#3a2f12,#1c2733 60%);box-shadow:0 -6px 18px rgba(0,0,0,.5);}
+    .answer-label{font-size:15px;margin-bottom:4px;}
+    .actionbar .reading-row input[type=number], .actionbar .reading-row input[type=text]{font-size:22px;padding:8px 10px;}
+    .actionbar #submitBtn{padding:10px 14px;font-size:16px;}
+    .actionbar #newPieceBtn{padding:10px 10px;font-size:13.5px;}
+    .actionbar .unit-suffix{min-width:40px;font-size:16px;}
+    .actionbar .reading-row{flex-wrap:nowrap;gap:6px;}
+    .actionbar .reading-row input{flex:1 1 70px;min-width:64px;}
+    .actionbar #submitBtn, .actionbar #newPieceBtn{flex:0 0 auto;}
+    .actionbar #newPieceBtn{font-size:12.5px;padding:8px 8px;line-height:1.15;max-width:76px;white-space:normal;}
+    .vbadge{font-size:11.5px;padding:1px 5px;}
     .bar-msg{display:block;font-size:13px;line-height:1.35;margin-bottom:6px;color:var(--text-dim);min-height:18px;}
     .bar-msg.good{color:var(--good);font-weight:600;}
     .bar-msg.bad{color:var(--bad);font-weight:600;}
     .actionbar .reading-row input{font-size:18px;padding:8px 10px;}
   }
-
   /* ---------- créditos y cómo citar ---------- */
   #credits{border:1px solid var(--grid);border-radius:8px;background:var(--panel);color:var(--steel);padding:0;
     width:min(740px,calc(100vw - 32px));max-height:calc(100vh - 32px);}
@@ -364,6 +418,7 @@
       <p class="progress" id="progressLine">Pieza 1 · modo práctica</p>
       <p class="progress" id="syncStatus" style="color:var(--text-dim);"></p>
       <div class="actionbar" id="actionBar">
+        <label class="answer-label" for="readingInput">✎ Escribe aquí tu lectura</label>
         <div class="bar-msg" id="barMsg" aria-hidden="true"></div>
         <div class="reading-row">
           <input type="number" step="0.01" id="readingInput" placeholder="0.00" aria-label="Tu lectura" aria-describedby="unitSuffix">
@@ -695,8 +750,8 @@
     os += txt(OX+6, BB-13.5, "cm", 7, {a:"start", fill:"#56626c"}) + txt(OX+6, BT+19, "in", 7, {a:"start", fill:"#56626c"});
     // nonio en la vista general (mismas divisiones, a escala reducida)
     let on = "";
-    for(let i=0;i<=RM.n;i++){ const x = OX + i*SM*S; on += vline(x, BB, BB+(i%RM.lab===0?6:3.5), .5); }
-    for(let i=0;i<=RI.n;i++){ const x = OX + i*SI*IN*S; on += vline(x, BT, BT-(i%RI.lab===0?6:3.5), .5); }
+    for(let i=0;i<=RM.n;i++){ const x = OX + i*SM*S; on += vline(x, BB, BB+(i===0?8:(i%RM.lab===0?6:3.5)), i===0?1.4:.5); }
+    for(let i=0;i<=RI.n;i++){ const x = OX + i*SI*IN*S; on += vline(x, BT, BT-(i===0?8:(i%RI.lab===0?6:3.5)), i===0?1.4:.5); }
     const VWo = Math.max(RM.n*SM, RI.n*SI*IN)*S;
 
     const knurlWheel = (cx, cy, r) => `<circle cx="${n2(cx)}" cy="${cy}" r="${r}" fill="url(#g-cylDark)" stroke="#2c343b"/><circle cx="${n2(cx)}" cy="${cy}" r="${r}" fill="url(#g-knurl)"/><circle cx="${n2(cx)}" cy="${cy}" r="3" fill="#20282f"/>`;
@@ -712,7 +767,7 @@
       ${knurlWheel(OX+SL-52, PB+17, 12)}
       <rect x="${OX-4}" y="${PT-70}" width="${n2(SL+8)}" height="${PB-PT+216}" fill="transparent"/>`;
 
-    const overview = `<svg class="instrument-svg sim-ov" id="simOv" viewBox="0 0 ${OW} ${OH}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Calibrador vernier: arrastra la corredera hasta que las mordazas de exteriores toquen la pieza">
+    const overview = `<svg class="instrument-svg sim-ov" id="simOv" viewBox="40 38 ${OW-40} ${OH-42}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Calibrador vernier: arrastra la corredera hasta que las mordazas de exteriores toquen la pieza">
       <rect x="${OX}" y="${PB+48}" width="${n2(target*S)}" height="74" rx="3" fill="url(#g-piece)" stroke="#7a4f0c"/>
       ${target*S>46?txt(OX+target*S/2, PB+90, "pieza", 12, {fill:"#4d3206", w:700}):""}
       <rect id="voRod" x="${n2(BEND)}" y="${(BT+BB)/2-3}" width="0" height="6" fill="url(#g-cyl)" stroke="#4d5861" stroke-width=".7"/>
@@ -750,7 +805,7 @@
         const x = XS + s*IN/16*Z, w = s%16===0, h = s%8===0, q = s%4===0, e8 = s%2===0;
         sc += vline(x, BY, BY+(w?50:(h?42:(q?34:(e8?27:19)))), w?2.6:1.8);
         if(w) sc += txt(x+6, BY+76, s/16, 28, {a:"start", w:700});
-        else if(h) sc += txt(x, BY+62, "½", 16, {w:600, fill:"#3d4852"});
+        else if(q) sc += txt(x, BY+62, ["","¼","½","¾"][(s%16)/4], 19, {w:700, fill:"#3d4852"});
       }
     } else {
       for(let s=0; s<=Math.floor(beamIn*40); s++){
@@ -766,13 +821,13 @@
     let vn = "";
     for(let i=0;i<=RM.n;i++){
       const x = XS + i*SM*Z, labeled = i%RM.lab===0;
-      vn += vline(x, BY+BH, BY+BH+(labeled?30:19), RM.n > 20 ? 1.6 : 2);
+      vn += vline(x, BY+BH, BY+BH+(i===0?36:(labeled?30:19)), i===0 ? 4.5 : (RM.n > 20 ? 1.6 : 2));
       if(labeled) vn += txt(x, BY+BH+50, i/RM.lab, 19, {w:700});
     }
     vn += txt(XS+VWM+34, BY+BH+24, RM.label, 15, {a:"start", w:700});
     for(let i=0;i<=RI.n;i++){
       const x = XS + i*SI*IN*Z, labeled = i%RI.lab===0;
-      vn += vline(x, BY, BY-(labeled?30:19), 2);
+      vn += vline(x, BY, BY-(i===0?36:(labeled?30:19)), i===0 ? 4.5 : 2);
       if(labeled) vn += txt(x, BY-36, i, 19, {w:700});
     }
     vn += txt(XS+VWI+40, BY-36, state.vres.in === "128" ? "1/128 in" : "0.001 in", 15, {a:"start", w:700});
@@ -788,13 +843,14 @@
         <rect x="${X0-10}" y="${LY0}" width="${n2(PR-X0+20)}" height="${LH}" fill="transparent"/>`;
 
     const lupa = `<div class="lupa"><div class="lupa-tag">Lupa · regla y nonio (sigue a la corredera; arrástrala aquí para el ajuste fino)</div>
+      <div class="lupa-wrap"><div class="vbadge" id="vbIn" aria-hidden="true"></div><div class="vbadge" id="vbMM" aria-hidden="true"></div>
       <div class="vscroll" id="vScroll"><svg class="instrument-svg lupa-svg vbig" id="simLupa" width="${n2(W)}" height="${LH}" viewBox="0 ${LY0} ${n2(W)} ${LH}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ampliación de la regla y el nonio">
       <rect x="${X0-110}" y="${BY}" width="${n2(BEAM_R-X0+110)}" height="${BH}" rx="3" fill="url(#g-steel)" stroke="#5b6771"/>
       ${sc}
       <g id="vSlider" style="cursor:grab;touch-action:none">${lSlider}</g>
       <g id="vZero" style="display:none"><path d="${isMM ? `M${XS} ${BY+BH+3} l-9 -15 h18z` : `M${XS} ${BY-3} l-9 15 h18z`}" fill="${HELP}"/></g>
       <line id="vHelp" x1="0" x2="0" y1="0" y2="0" stroke="${HELP}" stroke-width="3" stroke-dasharray="8,6" style="display:none"/>
-    </svg></div></div>`;
+    </svg></div></div></div>`;
 
     // En pantallas angostas la lupa se reduce (hasta 55 %) para que quepa el nonio completo.
     let kL = 1;
@@ -806,6 +862,21 @@
       const x = (XS + sim.p*Z)*kL;
       const left = x - Math.min(200*kL, Math.max(30, (cw - VW*kL)/2));
       c.scrollLeft = Math.max(0, left);
+      badges();
+    }
+    // Si el número de la pulgada (o de la decena de mm) quedó fuera de la lupa por la izquierda,
+    // se muestra fijo en el borde para saber en qué pulgada o decena se está leyendo.
+    function badges(){
+      const c = el("vScroll"), bi = el("vbIn"), bm = el("vbMM"); if(!c || !bi || !bm) return;
+      if(!c.dataset.badges){ c.addEventListener("scroll", badges, { passive: true }); c.dataset.badges = "1"; }
+      const leftX = c.scrollLeft/kL;                                  // x del dibujo en el borde izquierdo
+      const inMaj = Math.floor((leftX - XS)/(IN*Z)), mmMaj = Math.floor((leftX - XS)/(10*Z))*10;
+      const hideIn = inMaj < 0 || XS + inMaj*IN*Z >= leftX - 2;
+      const hideMM = mmMaj < 0 || XS + mmMaj*Z >= leftX - 2;
+      bi.style.display = hideIn ? "none" : ""; bi.textContent = `◂ ${inMaj} in`;
+      bm.style.display = hideMM ? "none" : ""; bm.textContent = `◂ ${mmMaj} mm`;
+      bi.style.top = n2((BY + 6 - LY0)*kL) + "px";
+      bm.style.top = n2((BY + BH - 38 - LY0)*kL - 22) + "px";
     }
     let lastMM = Math.floor(sim.p);
     function update(){
