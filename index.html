@@ -839,8 +839,8 @@
         ${vn}
         <rect x="${X0-10}" y="${LY0}" width="${n2(PR-X0+20)}" height="${LH}" fill="transparent"/>`;
 
-    const lupa = `<div class="lupa"><div class="lupa-tag">Lupa · regla y nonio (sigue a la corredera; arrástrala aquí para el ajuste fino)</div>
-      <div class="vscroll" id="vScroll"><svg class="instrument-svg lupa-svg vbig" id="simLupa" width="${n2(W)}" height="${LH}" viewBox="0 ${LY0} ${n2(W)} ${LH}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ampliación de la regla y el nonio">
+    const lupa = `<div class="lupa"><div class="lupa-tag">Lupa · regla y nonio (siempre centrada en el cero del nonio; arrastra aquí para el ajuste fino)</div>
+      <div class="vscroll" id="vScroll" style="overflow:hidden"><svg class="instrument-svg lupa-svg" id="simLupa" width="100%" height="${LH}" viewBox="0 ${LY0} ${n2(W)} ${LH}" preserveAspectRatio="xMinYMin meet" style="width:100%;border:0;border-radius:0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ampliación de la regla y el nonio">
       <rect x="${X0-110}" y="${BY}" width="${n2(BEAM_R-X0+110)}" height="${BH}" rx="3" fill="url(#g-steel)" stroke="#5b6771"/>
       ${sc}
       <g id="vSlider" style="cursor:grab;touch-action:none">${lSlider}</g>
@@ -848,16 +848,16 @@
       <line id="vHelp" x1="0" x2="0" y1="0" y2="0" stroke="${HELP}" stroke-width="3" stroke-dasharray="8,6" style="display:none"/>
     </svg></div></div>`;
 
-    // En pantallas angostas la lupa se reduce (hasta 50 %) para que quepa el nonio completo.
-    let kL = 1;
+    // La lupa no se desplaza a mano: su ventana (viewBox) se recalcula en cada movimiento para que el
+    // cero del nonio quede siempre en el mismo lugar y el nonio completo a la vista. En pantallas
+    // angostas se reduce (hasta 50 %) para que quepan el nonio y la marca anterior de la regla.
     function follow(){
-      const c = el("vScroll"); if(!c) return;
-      const cw = c.clientWidth;
-      const k = cw ? Math.min(1, Math.max(.5, cw/(VW + 300))) : 1;   // deja ver la marca anterior al cero del nonio
-      if(k !== kL){ kL = k; setAttr("simLupa", "width", n2(W*k)); setAttr("simLupa", "height", n2(LH*k)); }
-      const x = (XS + sim.p*Z)*kL;
-      const left = x - Math.min(200*kL, Math.max(30, (cw - VW*kL)/2));
-      c.scrollLeft = Math.max(0, left);
+      const c = el("vScroll"), sv = el("simLupa"); if(!c || !sv) return;
+      const cw = c.clientWidth || 600;
+      const k = Math.min(1, Math.max(.5, cw/(VW + 300)));
+      const margin = Math.max(30/k, (cw/k - VW)/2);       // espacio a la izquierda del cero (unidades del dibujo)
+      sv.setAttribute("height", n2(LH*k));
+      sv.setAttribute("viewBox", `${n2(XS + sim.p*Z - margin)} ${LY0} ${n2(cw/k)} ${LH}`);
     }
     let lastMM = Math.floor(sim.p);
     function update(){
@@ -889,7 +889,7 @@
     return {
       html: overview + lupa, update, seated,
       touch: "pan-y",                                        // vista general: arrastre horizontal mueve la corredera
-      lupaTouch: "pan-x pan-y", lupaDragTarget: "vSlider",   // lupa: fuera de la corredera se desplaza la vista
+      lupaTouch: "pan-y",                                    // lupa: arrastre horizontal = ajuste fino de la corredera
       drag(dx){ sim.p = clampP(sim.p + dx/S); },
       lupaDrag(dx){ sim.p = clampP(sim.p + dx/Z); },
       key(dir, big){ sim.p = clampP(sim.p + dir*(big ? 5 : .5)); },
@@ -1816,6 +1816,7 @@
   }catch(err){ /* almacenamiento no disponible: no es crítico */ }
   applyPrefs();
   newPiece();
+  window.addEventListener("resize", () => simRefresh());
   flushQueue();
 
   if("serviceWorker" in navigator){
