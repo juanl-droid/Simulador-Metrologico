@@ -225,6 +225,44 @@
   .linkbtn{background:none;border:none;padding:0;color:var(--amber);font:inherit;font-weight:500;cursor:pointer;text-decoration:underline;text-underline-offset:2px;}
   .linkbtn:hover{color:#ffbf2e;}
 
+  /* ---------- mejoras v1.2: accesibilidad, barra de respuesta, guía ---------- */
+  body.cb{--good:#56b4e9;--bad:#e8664a;}            /* paleta segura para daltonismo (azul / bermellón) */
+  body.bigtext .wrap{zoom:1.18;}
+  .sim-ov:focus-visible{outline:3px solid var(--amber);outline-offset:2px;}
+  .resrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:-4px 0 12px;font-size:13px;color:var(--text-dim);}
+  .resrow[hidden]{display:none;}
+  .resrow label{display:flex;align-items:center;gap:6px;}
+  .unit-suffix{display:flex;align-items:center;justify-content:center;min-width:44px;padding:0 8px;
+    background:var(--panel-2);border:1px solid var(--grid);border-radius:4px;
+    font-family:'IBM Plex Mono';font-weight:600;font-size:16px;color:var(--steel);}
+  .actionbar{margin-bottom:14px;}
+  .actionbar .reading-row{margin-bottom:0;flex-wrap:nowrap;}
+  .bar-msg{display:none;}
+  .toggles{display:flex;flex-wrap:wrap;gap:2px 16px;}
+  .howto{margin-top:12px;border-top:1px dashed var(--grid);padding-top:10px;font-size:13.5px;line-height:1.55;}
+  .howto summary{cursor:pointer;color:var(--amber);font-weight:500;}
+  .howto ol{margin:8px 0 6px;padding-left:20px;}
+  .howto li{margin-bottom:4px;}
+  .howto .ex{font-family:'IBM Plex Mono';font-size:12.5px;background:var(--panel-2);border:1px solid var(--grid);border-radius:4px;padding:6px 9px;display:inline-block;}
+  .howto .kbd{font-size:12.5px;color:var(--text-dim);margin:6px 0 0;}
+  .diag{display:block;margin-top:6px;}
+  .err-sym{font-family:'IBM Plex Sans';font-weight:700;margin-right:3px;}
+  .dlg{border:1px solid var(--grid);border-radius:8px;background:var(--panel);color:var(--steel);padding:18px 20px;width:min(460px,calc(100vw - 32px));}
+  .dlg::backdrop{background:rgba(8,12,17,.7);}
+  .dlg h2{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:24px;margin:0 0 8px;color:#f4f7f9;}
+  .dlg p{font-size:14px;line-height:1.5;margin:0 0 14px;}
+  .dlg .row{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;}
+  @media (max-width:880px){
+    body{padding-bottom:calc(132px + env(safe-area-inset-bottom));}
+    .actionbar{position:fixed;left:0;right:0;bottom:0;z-index:20;margin:0;
+      padding:8px 12px calc(10px + env(safe-area-inset-bottom));
+      background:rgba(22,32,43,.97);border-top:1px solid var(--amber-dim);box-shadow:0 -6px 18px rgba(0,0,0,.4);}
+    .bar-msg{display:block;font-size:13px;line-height:1.35;margin-bottom:6px;color:var(--text-dim);min-height:18px;}
+    .bar-msg.good{color:var(--good);font-weight:600;}
+    .bar-msg.bad{color:var(--bad);font-weight:600;}
+    .actionbar .reading-row input{font-size:18px;padding:8px 10px;}
+  }
+
   /* ---------- créditos y cómo citar ---------- */
   #credits{border:1px solid var(--grid);border-radius:8px;background:var(--panel);color:var(--steel);padding:0;
     width:min(740px,calc(100vw - 32px));max-height:calc(100vh - 32px);}
@@ -284,7 +322,6 @@
         <option value="30">30 min</option>
       </select>
     </div>
-    <button class="btn" id="newPieceBtn">Nueva pieza</button>
     <button class="btn" id="downloadBtn">Descargar resultados (CSV)</button>
     <button class="btn" id="resetBtn">Reiniciar sesión</button>
   </div>
@@ -298,26 +335,50 @@
         <button data-unit="in">Pulgadas — decimal</button>
         <button data-unit="infrac">Pulgadas — fracción</button>
       </div>
+      <div class="resrow" id="resRow">
+        Resolución del vernier:
+        <label>mm <select id="resMM" aria-label="Resolución del nonio en milímetros">
+          <option value="0.05">0.05 mm</option>
+          <option value="0.02">0.02 mm</option>
+        </select></label>
+        <label>in <select id="resIN" aria-label="Resolución del nonio en pulgadas">
+          <option value="128">1/128 in</option>
+          <option value="0.001">0.001 in</option>
+        </select></label>
+      </div>
       <div id="svgHolder"></div>
       <label class="help-toggle"><input type="checkbox" id="helpToggle"> Mostrar ayuda de lectura (línea verde de referencia, solo en práctica)</label>
-      <label class="help-toggle"><input type="checkbox" id="soundToggle" checked> Sonido del instrumento</label>
+      <div class="toggles">
+        <label class="help-toggle"><input type="checkbox" id="soundToggle" checked> Sonido del instrumento</label>
+        <label class="help-toggle"><input type="checkbox" id="bigTextToggle"> Texto grande</label>
+        <label class="help-toggle"><input type="checkbox" id="cbToggle"> Colores para daltonismo</label>
+      </div>
+      <details class="howto" id="howto">
+        <summary>¿Cómo se lee este instrumento? (guía rápida)</summary>
+        <div id="howtoBody"></div>
+      </details>
     </div>
 
     <div class="panel">
       <h2>Tu lectura</h2>
       <p class="progress" id="progressLine">Pieza 1 · modo práctica</p>
       <p class="progress" id="syncStatus" style="color:var(--text-dim);"></p>
-      <div class="reading-row">
-        <input type="number" step="0.01" id="readingInput" placeholder="0.00">
-        <button class="btn primary" id="submitBtn">Verificar</button>
+      <div class="actionbar" id="actionBar">
+        <div class="bar-msg" id="barMsg" aria-hidden="true"></div>
+        <div class="reading-row">
+          <input type="number" step="0.01" id="readingInput" placeholder="0.00" aria-label="Tu lectura" aria-describedby="unitSuffix">
+          <span class="unit-suffix" id="unitSuffix">mm</span>
+          <button class="btn primary" id="submitBtn">Verificar</button>
+          <button class="btn" id="newPieceBtn">Nueva pieza</button>
+        </div>
       </div>
       <p class="unit-hint" id="unitHint"></p>
-      <div class="feedback" id="feedback">Escribe tu lectura y presiona Verificar.</div>
+      <div class="feedback" id="feedback" aria-live="polite">Escribe tu lectura y presiona Verificar.</div>
       <div id="summaryHolder"></div>
       <h2 style="margin-top:16px;">Bitácora de sesión</h2>
       <div class="history-wrap">
         <table>
-          <thead><tr><th>#</th><th>Leído</th><th>Correcto</th><th>Error</th><th>Tiempo</th></tr></thead>
+          <thead><tr><th>#</th><th>Leído</th><th>Correcto</th><th>Error</th><th>Intento</th><th>Tiempo</th></tr></thead>
           <tbody id="historyBody"></tbody>
         </table>
       </div>
@@ -325,10 +386,20 @@
   </div>
 
   <footer>
-    Prototipo desarrollado para el protocolo de investigación «Diseño y validación de un módulo virtual/interactivo para la enseñanza de instrumentos de medición mecánica». Cada instrumento se dibuja con su escala métrica y su escala en pulgadas sobre la misma pieza (resoluciones: vernier 0.05 mm / 1/128 in · micrómetro 0.01 mm / 0.001 in · comparador 0.01 mm / 0.001 in por división). Estos valores pueden ajustarse según el instrumento real usado como referencia en la validación de expertos.
+    Prototipo desarrollado para el protocolo de investigación «Diseño y validación de un módulo virtual/interactivo para la enseñanza de instrumentos de medición mecánica». Cada instrumento se dibuja con su escala métrica y su escala en pulgadas sobre la misma pieza (resoluciones: vernier 0.05 o 0.02 mm / 1/128 o 0.001 in · micrómetro 0.01 mm / 0.001 in · comparador 0.01 mm / 0.001 in por división). Estos valores pueden ajustarse según el instrumento real usado como referencia en la validación de expertos.
     <div class="credbar"><span id="credline"></span><span aria-hidden="true">·</span><button class="linkbtn" id="opencredits" type="button">Créditos y cómo citar</button></div>
   </footer>
 </div>
+
+<dialog id="resetDlg" class="dlg" aria-labelledby="resetTitle">
+  <h2 id="resetTitle">¿Reiniciar la sesión?</h2>
+  <p id="resetText"></p>
+  <div class="row">
+    <button class="btn" type="button" id="resetCancel">Cancelar</button>
+    <button class="btn" type="button" id="resetNoSave">Borrar sin descargar</button>
+    <button class="btn primary" type="button" id="resetSave">Descargar CSV y reiniciar</button>
+  </div>
+</dialog>
 
 <dialog id="credits" aria-labelledby="credtitle">
   <div class="cin">
@@ -359,37 +430,66 @@
   // URL del Google Apps Script desplegado como aplicación web (recibe cada lectura y la agrega a la Hoja de Google).
   const SHEETS_ENDPOINT = "https://script.google.com/macros/s/AKfycbz2C8sblpDSTh5OZg6NWDJPsJ53PkJEiL8lcOKx120uo9fNXQyXCYG21GWVl4hHHycICA/exec";
 
-  function sendToSheet(record){
-    const statusEl = document.getElementById("syncStatus");
-    if(!navigator.onLine){
-      if(statusEl) statusEl.innerHTML = "⚠ sin conexión — la lectura no se envió a la hoja. Descarga tu CSV como respaldo al terminar.";
-      return;
-    }
-    const studentName = document.getElementById("studentName").value.trim() || "anonimo";
-    const mmVal = record.unit==="mm" ? record.value : record.value*MM_PER_IN;
-    fetch(SHEETS_ENDPOINT, {
+  // En una copia local (pruebas, desarrollo) no se envía nada, para no mezclar datos de prueba con los de investigación.
+  const IS_LOCAL = location.protocol === "file:" || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+  // Lecturas que no se pudieron enviar (sin internet): se guardan en el dispositivo y se reenvían al volver la conexión.
+  const QUEUE_KEY = "metrologia_sim_pendientes";
+  function loadQueue(){ try{ return JSON.parse(localStorage.getItem(QUEUE_KEY) || "[]"); }catch(e){ return []; } }
+  function saveQueue(q){ try{ localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); }catch(e){ /* sin almacenamiento: queda el CSV */ } }
+  function setSync(msg){ const s = document.getElementById("syncStatus"); if(s) s.textContent = msg; }
+
+  function postPayload(payload){
+    return fetch(SHEETS_ENDPOINT, {
       method: "POST",
       mode: "no-cors",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({
-        estudiante: studentName,
-        instrumento: record.inst,
-        modo: record.mode,
-        unidad: record.unit,
-        valor_correcto: record.value,
-        lectura_estudiante: record.enteredExact != null ? record.enteredExact : record.entered,
-        lectura_texto: record.enteredDisplay || "",
-        error: record.error,
-        valor_correcto_mm: mmVal,
-        timestamp: record.ts,
-        tiempo_respuesta_s: record.tiempoRespuestaSegundos
-      })
-    }).then(()=>{
-      if(statusEl) statusEl.innerHTML = "✓ enviado a la hoja de registro";
-    }).catch(()=>{
-      if(statusEl) statusEl.innerHTML = "⚠ no se pudo enviar — descarga tu CSV como respaldo al terminar.";
+      body: JSON.stringify(payload)
     });
   }
+
+  function buildPayload(record){
+    const studentName = document.getElementById("studentName").value.trim() || "anonimo";
+    const mmVal = record.unit==="mm" ? record.value : record.value*MM_PER_IN;
+    return {
+      estudiante: studentName,
+      instrumento: record.inst,
+      modo: record.mode,
+      unidad: record.unit,
+      valor_correcto: record.value,
+      lectura_estudiante: record.enteredExact != null ? record.enteredExact : record.entered,
+      lectura_texto: record.enteredDisplay || "",
+      error: record.error,
+      valor_correcto_mm: mmVal,
+      timestamp: record.ts,
+      tiempo_respuesta_s: record.tiempoRespuestaSegundos,
+      intento: record.intento,
+      tipo_error: record.diag,
+      resolucion: record.res
+    };
+  }
+
+  function sendToSheet(record){
+    if(IS_LOCAL){ setSync("Copia local: las lecturas no se envían a la hoja de registro."); return; }
+    const payload = buildPayload(record);
+    const enqueue = () => {
+      const q = loadQueue(); q.push(payload); saveQueue(q);
+      setSync(`⚠ sin conexión — ${q.length} lectura(s) guardada(s) en este dispositivo; se enviarán al volver la conexión.`);
+    };
+    if(!navigator.onLine){ enqueue(); return; }
+    postPayload(payload).then(()=>{ setSync("✓ enviado a la hoja de registro"); flushQueue(); }).catch(enqueue);
+  }
+
+  function flushQueue(){
+    if(IS_LOCAL || !navigator.onLine) return;
+    const q = loadQueue(); if(!q.length) return;
+    saveQueue([]);
+    const failed = [];
+    Promise.all(q.map(p => postPayload(p).catch(()=>{ failed.push(p); }))).then(()=>{
+      if(failed.length){ saveQueue(loadQueue().concat(failed)); setSync(`⚠ quedan ${failed.length} lectura(s) por enviar.`); }
+      else setSync(`✓ se enviaron ${q.length} lectura(s) que estaban pendientes`);
+    });
+  }
+  window.addEventListener("online", flushQueue);
 
   const MM_PER_IN = 25.4;
 
@@ -443,9 +543,22 @@
         in: { resolution: 1/128, decimals: 4 },
         infrac: { resolution: 1/128, decimals: 4, isFraction: true, fracDen: 128 }
       },
+      meta(){
+        const mm = VRES.mm[state.vres.mm], inch = VRES.in[state.vres.in];
+        return `escala métrica · resolución ${mm.label} · rango 0–150 mm<br>escala en pulgadas · resolución ${inch.label} · rango 0–6 in`;
+      },
+      // La pieza se genera en pasos exactos de la resolución de la unidad en que se va a leer,
+      // para que siempre exista una línea del nonio que coincida.
       genValueMM(){
-        const steps = 10 + Math.floor(Math.random()*2791); // 0.50..140 mm en pasos de 0.05 mm
-        return steps*0.05;
+        const u = state.answerUnit;
+        if(u === "mm"){
+          const r = VRES.mm[state.vres.mm].resolution;
+          const lo = Math.round(.5/r), hi = Math.round(140/r);
+          return Math.round((lo + Math.floor(Math.random()*(hi - lo)))*r*1000)/1000;
+        }
+        const r = u === "infrac" ? 1/128 : VRES.in[state.vres.in].resolution;
+        const lo = Math.ceil(.02/r), hi = Math.floor(5.5/r);
+        return (lo + Math.floor(Math.random()*(hi - lo)))*r*MM_PER_IN;
       },
       build(valueMM, unit, showHelp){ return buildVernier(valueMM, unit, showHelp); }
     },
@@ -473,7 +586,38 @@
     }
   };
 
+  // Resoluciones disponibles para el nonio del vernier (selector en la interfaz).
+  // div: valor de la división de la regla; n: divisiones del nonio; lab: cada cuántas divisiones va un número.
+  const VRES = {
+    mm: {
+      "0.05": { resolution: .05, decimals: 2, label: "0.05 mm", div: 1, n: 20, lab: 2 },
+      "0.02": { resolution: .02, decimals: 2, label: "0.02 mm", div: 1, n: 50, lab: 5 }
+    },
+    in: {
+      "128":   { resolution: 1/128, decimals: 4, label: "1/128 in (0.0078 in)", div: 1/16,  n: 8,  lab: 4 },
+      "0.001": { resolution: .001,  decimals: 3, label: "0.001 in", div: .025, n: 25, lab: 5 }
+    }
+  };
+
+  // Unidades y resoluciones vigentes de un instrumento (en el vernier dependen del selector).
+  function unitsOf(key){
+    if(key !== "vernier") return INSTRUMENTS[key].units;
+    const mm = VRES.mm[state.vres.mm], inch = VRES.in[state.vres.in];
+    const u = {
+      mm: { resolution: mm.resolution, decimals: mm.decimals },
+      in: { resolution: inch.resolution, decimals: inch.decimals }
+    };
+    if(state.vres.in === "128") u.infrac = { resolution: 1/128, decimals: 4, isFraction: true, fracDen: 128 };
+    return u;
+  }
+  function metaOf(key){ const i = INSTRUMENTS[key]; return i.meta ? i.meta() : `${i.metaMM}<br>${i.metaIN}`; }
+
+  const MAX_TRIES = 3;   // intentos por pieza en modo práctica antes de mostrar el valor real
+
   const state = {
+    vres: { mm: "0.05", in: "128" },
+    tries: 0,             // intentos en la pieza actual
+    pieceId: 0,           // identificador de la pieza actual (para no mostrar su valor antes de cerrarla)
     instrument: "vernier",
     mode: "practica",
     currentValueMM: null,
@@ -496,7 +640,7 @@
 
   const INK = "#161d24";
   const HELP = "#1f9d63";
-  const sim = { p: null, api: null, raf: 0 };
+  const sim = { p: null, api: null, raf: 0, wasSeated: null };
 
   const SVG_DEFS = `<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
     <linearGradient id="g-steel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4f7f9"/><stop offset=".5" stop-color="#d3dbe0"/><stop offset="1" stop-color="#aeb9c1"/></linearGradient>
@@ -530,7 +674,11 @@
     const BY = 120, BH = 170, PH = 56, H = 486;
     const IN = MM_PER_IN, isMM = unit === "mm";
     if(sim.p === null) sim.p = Math.min(MAX, target + 28);
-    const VW = 19*.95*Z;                                   // largo del nonio de milímetros
+    const RM = VRES.mm[state.vres.mm], RI = VRES.in[state.vres.in];
+    const SM = RM.div*(RM.n - 1)/RM.n;                     // separación entre líneas del nonio mm (mm)
+    const SI = RI.div*(RI.n - 1)/RI.n;                     // separación entre líneas del nonio en pulgadas (in)
+    const VWM = RM.n*SM*Z, VWI = RI.n*SI*IN*Z;             // largo de cada nonio (px)
+    const VW = Math.max(VWM, VWI);
     const PL = XS - 30, PR = XS + VW + 96;                 // extremos de las placas del nonio
     const BEAM_R = XS + (MAX + 4)*Z + (PR - X0);           // la regla alcanza a la corredera abierta
     const W = BEAM_R + 40;
@@ -544,29 +692,43 @@
       if(maj) sc += txt(x+6, BY+BH-58, mm, 28, {a:"start", w:700});
       else if(mid) sc += txt(x, BY+BH-44, mm, 15, {w:600, fill:"#3d4852"});
     }
-    for(let s=0; s<=Math.floor((MAX+(PR-XS)/Z)/IN*16); s++){
-      const x = XS + s*IN/16*Z, w = s%16===0, h = s%8===0, q = s%4===0, e8 = s%2===0;
-      sc += vline(x, BY, BY+(w?50:(h?42:(q?34:(e8?27:19)))), w?2.6:1.8);
-      if(w) sc += txt(x+6, BY+76, s/16, 28, {a:"start", w:700});
-      else if(h) sc += txt(x, BY+62, "½", 16, {w:600, fill:"#3d4852"});
+    const beamIn = (MAX+(PR-XS)/Z)/IN;
+    if(state.vres.in === "128"){
+      // regla en dieciseisavos de pulgada
+      for(let s=0; s<=Math.floor(beamIn*16); s++){
+        const x = XS + s*IN/16*Z, w = s%16===0, h = s%8===0, q = s%4===0, e8 = s%2===0;
+        sc += vline(x, BY, BY+(w?50:(h?42:(q?34:(e8?27:19)))), w?2.6:1.8);
+        if(w) sc += txt(x+6, BY+76, s/16, 28, {a:"start", w:700});
+        else if(h) sc += txt(x, BY+62, "½", 16, {w:600, fill:"#3d4852"});
+      }
+    } else {
+      // regla en divisiones de 0.025 in, numerada cada 0.100 in
+      for(let s=0; s<=Math.floor(beamIn*40); s++){
+        const x = XS + s*.025*IN*Z, w = s%40===0, t = s%4===0, h = s%2===0;
+        sc += vline(x, BY, BY+(w?50:(t?40:(h?29:21))), w?2.6:1.8);
+        if(w) sc += txt(x+6, BY+76, s/40, 28, {a:"start", w:700});
+        else if(t) sc += txt(x, BY+58, (s/4)%10, 15, {w:600, fill:"#3d4852"});
+      }
     }
     sc += txt(XS-14, BY+BH-12, "mm", 16, {a:"end", w:700, fill:"#3d4852"});
     sc += txt(XS-14, BY+26, "in", 16, {a:"end", w:700, fill:"#3d4852"});
 
     // --- nonio (en la corredera) ---
     let vn = "";
-    for(let i=0;i<=20;i++){
-      const x = XS + i*.95*Z;
-      vn += vline(x, BY+BH, BY+BH+(i%2===0?30:19), 2);
-      if(i%2===0) vn += txt(x, BY+BH+50, i/2, 19, {w:700});
+    // nonio mm: n divisiones; cada número = 0.1 mm (0 a 10)
+    for(let i=0;i<=RM.n;i++){
+      const x = XS + i*SM*Z, labeled = i%RM.lab===0;
+      vn += vline(x, BY+BH, BY+BH+(labeled?30:19), RM.n > 20 ? 1.6 : 2);
+      if(labeled) vn += txt(x, BY+BH+50, i/RM.lab, 19, {w:700});
     }
-    vn += txt(XS+VW+34, BY+BH+24, "0.05 mm", 15, {a:"start", w:700});
-    for(let i=0;i<=8;i++){
-      const x = XS + i*(7/128)*IN*Z;
-      vn += vline(x, BY, BY-(i%4===0?30:19), 2);
-      if(i%4===0) vn += txt(x, BY-36, i, 19, {w:700});
+    vn += txt(XS+VWM+34, BY+BH+24, RM.label, 15, {a:"start", w:700});
+    // nonio en pulgadas: 8 divisiones de 1/128 in, o 25 de 0.001 in
+    for(let i=0;i<=RI.n;i++){
+      const x = XS + i*SI*IN*Z, labeled = i%RI.lab===0;
+      vn += vline(x, BY, BY-(labeled?30:19), 2);
+      if(labeled) vn += txt(x, BY-36, i, 19, {w:700});
     }
-    vn += txt(XS+8*(7/128)*IN*Z+40, BY-36, "1/128 in", 15, {a:"start", w:700});
+    vn += txt(XS+VWI+40, BY-36, state.vres.in === "128" ? "1/128 in" : "0.001 in", 15, {a:"start", w:700});
 
     const screw = (x,y) => `<circle cx="${n2(x)}" cy="${y}" r="6" fill="#262d33"/><path d="M${n2(x-4)} ${y}h8M${n2(x)} ${y-4}v8" stroke="#8c979f" stroke-width="1.2"/>`;
     const slider = `
@@ -601,8 +763,10 @@
       const left = x - Math.min(200, Math.max(40, (cw - VW)/2));
       c.scrollLeft = Math.max(0, left);
     }
+    let lastMM = Math.floor(sim.p);
     function update(){
       const p = sim.p;
+      if(Math.floor(p) !== lastMM){ tickThrottled("slide", 35); lastMM = Math.floor(p); }
       setAttr("vSlider", "transform", `translate(${n2(p*Z)},0)`);
       setAttr("vZero", "transform", `translate(${n2(p*Z)},0)`);
       const hint = el("vHint");
@@ -612,10 +776,11 @@
       if(h){
         if(!help){ h.style.display = "none"; }
         else if(isMM){
-          const n = ((Math.round(p/.05) % 20) + 20) % 20, x = XS + p*Z + n*.95*Z;
+          const n = ((Math.round(p/RM.resolution) % RM.n) + RM.n) % RM.n, x = XS + p*Z + n*SM*Z;
           h.setAttribute("x1", n2(x)); h.setAttribute("x2", n2(x)); h.setAttribute("y1", BY+BH-60); h.setAttribute("y2", BY+BH+34); h.style.display = "";
         } else {
-          const n = ((Math.round(p/IN*128) % 8) + 8) % 8, x = XS + p*Z + n*(7/128)*IN*Z;
+          const r = unit === "infrac" ? 1/128 : RI.resolution;
+          const n = ((Math.round(p/IN/r) % RI.n) + RI.n) % RI.n, x = XS + p*Z + n*SI*IN*Z;
           h.setAttribute("x1", n2(x)); h.setAttribute("x2", n2(x)); h.setAttribute("y1", BY-34); h.setAttribute("y2", BY+60); h.style.display = "";
         }
       }
@@ -625,6 +790,8 @@
     return {
       html, update, seated, touch: "pan-x pan-y", dragTarget: "vSlider",
       drag(dx){ sim.p = Math.min(MAX, Math.max(target, sim.p + 3*dx/Z)); },
+      key(dir, big){ sim.p = Math.min(MAX, Math.max(target, sim.p + dir*(big ? 5 : .5))); },
+      contactSound: true,
       closeTo: target, openTo: Math.min(MAX, target + 28),
       labels: { close: "Cerrar las mordazas sobre la pieza", open: "Abrir",
         open_msg: "Mordazas abiertas.",
@@ -647,6 +814,17 @@
   // "tick": roce del tambor al pasar cada división; "ratchet": clic metálico del trinquete
   function playClick(kind){
     const c = audioCtx(); if(!c) return;
+    if(kind === "slide" || kind === "contact"){
+      // "slide": roce suave de la corredera o de la pieza; "contact": golpe seco al tocar la pieza
+      const con = kind === "contact", now = c.currentTime, dur = con ? .035 : .012;
+      const buf = c.createBuffer(1, Math.ceil(c.sampleRate*dur), c.sampleRate), d = buf.getChannelData(0);
+      for(let i=0;i<d.length;i++) d[i] = (Math.random()*2-1) * Math.pow(1 - i/d.length, con ? 3 : 6);
+      const src = c.createBufferSource(); src.buffer = buf;
+      const bp = c.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = con ? 1300 : 3800; bp.Q.value = con ? 2.2 : 1.2;
+      const g = c.createGain(); g.gain.value = con ? .6 : .09;
+      src.connect(bp); bp.connect(g); g.connect(c.destination); src.start(now);
+      return;
+    }
     const now = c.currentTime, rat = kind === "ratchet";
     const dur = rat ? .045 : .014;
     const buf = c.createBuffer(1, Math.ceil(c.sampleRate*dur), c.sampleRate), d = buf.getChannelData(0);
@@ -772,6 +950,7 @@
       html: overview + lupa, update, seated, touch: "none",
       drag(dx, dyPx, axis){ move(axis === "y" ? (dyPx/9)*divStep : dx/S); },
       lupaDrag(dx, dyPx, axis){ move(axis === "y" ? (dyPx/9)*divStep : dx/Z); },
+      key(dir, big){ move(dir*(big ? pitch : divStep)); },
       arrive(to){ if(Math.abs(to - target) < 1e-7){ [0,140,280].forEach(ms => setTimeout(() => playClick("ratchet"), ms)); } },
       closeTo: target, openTo: MAX,
       labels: { close: "Girar el tambor hasta el contacto", open: "Abrir",
@@ -796,13 +975,15 @@
       face += `<line x1="${n2(CX+130*c)}" y1="${n2(CY+130*s)}" x2="${n2(CX+r2*c)}" y2="${n2(CY+r2*s)}" stroke="${INK}" stroke-width="${i%10===0?2.2:1.2}"/>`;
       if(i%10===0) face += txt(CX+94*c, CY+94*s+6.5, i, 19, {w:600});
     }
-    const SCY = CY - 49, SR = 35;
-    let sub = `<circle cx="${CX}" cy="${SCY}" r="${SR}" fill="none" stroke="${INK}" stroke-width="1"/>`;
+    // contador de vueltas (ampliado: los jueces lo encontraron difícil de leer)
+    const SCY = CY - 42, SR = 40;
+    let sub = `<circle cx="${CX}" cy="${SCY}" r="${SR}" fill="#f7f9fa" stroke="${INK}" stroke-width="1.4"/>`;
     for(let i=0;i<10;i++){
       const a = (i/10)*2*Math.PI - Math.PI/2, c = Math.cos(a), s = Math.sin(a);
-      sub += `<line x1="${n2(CX+SR*c)}" y1="${n2(SCY+SR*s)}" x2="${n2(CX+(SR-7)*c)}" y2="${n2(SCY+(SR-7)*s)}" stroke="${INK}" stroke-width="1.6"/>`;
-      sub += txt(CX+(SR-16)*c, SCY+(SR-16)*s+4.3, i, 12, {w:700});
+      sub += `<line x1="${n2(CX+SR*c)}" y1="${n2(SCY+SR*s)}" x2="${n2(CX+(SR-8)*c)}" y2="${n2(SCY+(SR-8)*s)}" stroke="${INK}" stroke-width="1.8"/>`;
+      sub += txt(CX+(SR-18)*c, SCY+(SR-18)*s+5, i, 14, {w:700});
     }
+    sub += txt(CX, CY+80, isMM ? "1 vuelta = 1 mm" : "1 vuelta = 0.1 in", 11, {fill:"#56626c"});
     const ht = target*S;
     const svg = `<svg class="instrument-svg sim-ov sim-dial" id="simOv" viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Comparador de carátula en su soporte: desliza la pieza bajo el palpador">
       <rect x="0" y="${TY}" width="640" height="50" fill="url(#g-stone)"/><line x1="0" y1="${TY}" x2="640" y2="${TY}" stroke="#8ea0b3" stroke-width="1.5"/>
@@ -828,15 +1009,17 @@
       ${face}${sub}
       ${txt(CX, CY+46, isMM?"0.01 mm":"0.001 in", 15, {w:600})}${txt(CX, CY+64, isMM?"0 – 10 mm":"0 – 1 in", 11, {fill:"#56626c"})}
       <line id="cHelp" x1="${CX}" y1="${CY}" x2="${CX}" y2="${CY-134}" stroke="${HELP}" stroke-width="2.2" stroke-dasharray="6,4" style="display:none"/>
-      <line id="cSub" x1="${CX}" y1="${SCY+5}" x2="${CX}" y2="${SCY-SR+7}" stroke="${INK}" stroke-width="2"/><circle cx="${CX}" cy="${SCY}" r="3" fill="${INK}"/>
+      <line id="cSub" x1="${CX}" y1="${SCY+6}" x2="${CX}" y2="${SCY-SR+8}" stroke="${INK}" stroke-width="2.6"/><circle cx="${CX}" cy="${SCY}" r="3.5" fill="${INK}"/>
       <g id="cNeedle"><path d="M${CX-2.6} ${CY+26} L${CX+2.6} ${CY+26} L${CX+.7} ${CY-122} L${CX-.7} ${CY-122}Z" fill="#b3261e" stroke="#7d1a14" stroke-width=".5"/></g>
       <circle cx="${CX}" cy="${CY}" r="8" fill="url(#g-cylDark)" stroke="#22303c"/>
       <g id="cHint" fill="#f2a900" opacity=".9"><path d="M0 0l16 -9v6h46v6h-46v6z"/></g>
     </svg>`;
 
     const seated = () => CX - sim.p >= L - 1e-7;
+    let lastStep = Math.floor(disp(sim.p)/(perRev/10));
     function update(){
       const bx = sim.p, d = disp(bx), rev = d/perRev;
+      const st = Math.floor(d/(perRev/10)); if(st !== lastStep){ tickThrottled("tick", 30); lastStep = st; }
       setAttr("cBlock", "transform", `translate(${n2(bx)},0)`);
       setAttr("cPlunger", "transform", `translate(0,${n2(-d*S)})`);
       setAttr("cNeedle", "transform", `rotate(${n2((rev % 1)*360)} ${CX} ${CY})`);
@@ -847,6 +1030,8 @@
     return {
       html: svg, update, seated, touch: "pan-y",
       drag(dx){ sim.p = Math.min(BX_OUT, Math.max(BX_IN, sim.p + dx)); },
+      key(dir, big){ sim.p = Math.min(BX_OUT, Math.max(BX_IN, sim.p + dir*(big ? 30 : 6))); },
+      contactSound: true,
       closeTo: BX_IN, openTo: BX_OUT, slow: true,
       labels: { close: "Colocar la pieza bajo el palpador", open: "Retirar la pieza",
         open_msg: "Palpador sobre la mesa de referencia (lectura en cero).",
@@ -862,7 +1047,13 @@
     s.textContent = ok ? a.labels.seated_msg : a.labels.open_msg;
     s.classList.toggle("ok", ok);
   }
-  function simRefresh(){ if(sim.api){ sim.api.update(); simStatus(); } }
+  function simRefresh(){
+    if(!sim.api) return;
+    sim.api.update(); simStatus();
+    const s = sim.api.seated();
+    if(s && sim.wasSeated === false && sim.api.contactSound) playClick("contact");
+    sim.wasSeated = s;
+  }
 
   function simAnimate(to){
     cancelAnimationFrame(sim.raf);
@@ -928,6 +1119,20 @@
     if(api.lupaDrag) bindDrag(el("simLupa"), (dx, dy, axis) => api.lupaDrag(dx, dy, axis));
     el("simClose").addEventListener("click", () => simAnimate(api.closeTo));
     el("simOpen").addEventListener("click", () => simAnimate(api.openTo));
+    // Manejo con teclado: Tab hasta el instrumento, flechas para moverlo (Mayús = paso largo),
+    // Enter para llevarlo al contacto y Esc para abrirlo.
+    const ov = el("simOv");
+    if(ov){
+      ov.setAttribute("tabindex", "0");
+      ov.setAttribute("aria-label", (ov.getAttribute("aria-label") || "") + ". Con teclado: flechas para mover, Mayús+flecha paso largo, Enter para cerrar sobre la pieza, Esc para abrir.");
+      ov.addEventListener("keydown", e => {
+        const dir = (e.key === "ArrowRight" || e.key === "ArrowUp") ? 1 : (e.key === "ArrowLeft" || e.key === "ArrowDown") ? -1 : 0;
+        if(dir && api.key){ e.preventDefault(); cancelAnimationFrame(sim.raf); api.key(dir, e.shiftKey); simRefresh(); }
+        else if(e.key === "Enter" || e.key === " "){ e.preventDefault(); simAnimate(api.closeTo); }
+        else if(e.key === "Escape"){ e.preventDefault(); simAnimate(api.openTo); }
+      });
+    }
+    sim.wasSeated = null;
     simRefresh();
   }
 
@@ -952,9 +1157,13 @@
   };
 
   function updateUnitUI(){
-    const inst = INSTRUMENTS[state.instrument];
-    document.querySelectorAll("#unitSeg button").forEach(b=>{ b.style.display = inst.units[b.dataset.unit] ? "" : "none"; b.classList.toggle("active", b.dataset.unit===state.answerUnit); });
-    const uConf = inst.units[state.answerUnit];
+    const units = unitsOf(state.instrument);
+    document.querySelectorAll("#unitSeg button").forEach(b=>{ b.style.display = units[b.dataset.unit] ? "" : "none"; b.classList.toggle("active", b.dataset.unit===state.answerUnit); });
+    const uConf = units[state.answerUnit];
+    el("unitSuffix").textContent = state.answerUnit === "mm" ? "mm" : "in";
+    el("resRow").hidden = state.instrument !== "vernier";
+    el("resMM").value = state.vres.mm; el("resIN").value = state.vres.in;
+    renderHowto();
     const input = document.getElementById("readingInput");
     if(uConf.isFraction){
       input.type = "text";
@@ -977,24 +1186,152 @@
   }
 
   function randomizeAnswerUnit(){
-    const inst = INSTRUMENTS[state.instrument];
-    const units = Object.keys(inst.units);
+    const units = Object.keys(unitsOf(state.instrument));
     state.answerUnit = units[Math.floor(Math.random()*units.length)];
   }
 
   function setUnitSegDisabled(disabled){
     document.querySelectorAll("#unitSeg button").forEach(b=>b.disabled = disabled);
+    el("resMM").disabled = disabled; el("resIN").disabled = disabled;
+  }
+
+  // Retroalimentación en el panel y, en teléfono, también en la barra fija inferior.
+  function setFeedback(cls, html, short){
+    const fb = el("feedback");
+    fb.className = "feedback" + (cls ? " " + cls : "");
+    fb.innerHTML = html;
+    const bm = el("barMsg");
+    bm.className = "bar-msg" + (cls ? " " + cls : "");
+    bm.textContent = short || "";
+  }
+
+  // ---------- guía rápida de lectura ----------
+  function howtoSteps(){
+    const k = state.instrument, u = state.answerUnit;
+    const contact = {
+      vernier: "Cierra las mordazas sobre la pieza: arrastra la corredera o usa «Cerrar las mordazas sobre la pieza».",
+      micrometro: "Gira el tambor (arrastra hacia arriba o abajo, o usa el botón) hasta que el husillo toque la pieza; el trinquete hace clic.",
+      comparador: "Desliza la pieza bajo el palpador (o usa el botón); la varilla sube y mueve las agujas."
+    }[k];
+    if(k === "vernier" && u === "mm"){
+      const r = VRES.mm[state.vres.mm];
+      return { steps: [contact,
+        "En la regla, lee los milímetros enteros: la última marca que queda a la izquierda del cero del nonio.",
+        `Busca la única línea del nonio que coincide exactamente con una línea de la regla. Cada división del nonio vale ${r.label}; cada número del nonio vale 0.1 mm.`,
+        "Suma los milímetros enteros y la lectura del nonio."],
+        ex: state.vres.mm === "0.05" ? "23 mm + 0.45 mm = 23.45 mm" : "23 mm + 0.36 mm = 23.36 mm" };
+    }
+    if(k === "vernier" && state.vres.in === "0.001"){
+      return { steps: [contact,
+        "En la escala de pulgadas (arriba), cada número vale 0.100 in y cada división 0.025 in. Lee hasta la última marca antes del cero del nonio.",
+        "Busca la línea del nonio que coincide con una de la regla: su número son las milésimas que se suman (0 a 24).",
+        "Suma pulgadas enteras + décimas + divisiones de 0.025 + nonio."],
+        ex: "1.000 + 0.300 + 0.050 + 0.013 = 1.363 in" };
+    }
+    if(k === "vernier"){
+      return { steps: [contact,
+        "En la escala de pulgadas (arriba), cuenta las pulgadas enteras y los dieciseisavos (1/16 in por división) hasta la última marca antes del cero del nonio.",
+        "La línea del nonio que coincide con una de la regla indica cuántos 1/128 in se suman (0 a 7).",
+        u === "infrac" ? "Pasa todo a 128 avos y súmalo. Puedes escribir la fracción simplificada o no, por ejemplo 1 43/128." : "Suma y convierte a decimal (1/128 in = 0.0078 in)."],
+        ex: "1 in + 5/16 in + 3/128 in = 1 43/128 in (1.3359 in)" };
+    }
+    if(k === "micrometro" && u === "mm"){
+      return { steps: [contact,
+        "En el manguito, lee los milímetros enteros visibles (líneas de arriba de la línea horizontal).",
+        "Si después del último milímetro ya se ve una línea de abajo, suma 0.50 mm.",
+        "En el tambor, la división alineada con la línea horizontal del manguito da las centésimas (0.01 mm cada una)."],
+        ex: "7 mm + 0.50 mm + 0.28 mm = 7.78 mm" };
+    }
+    if(k === "micrometro"){
+      return { steps: [contact,
+        "En el manguito, cada número vale 0.100 in y cada división 0.025 in.",
+        "En el tambor, cada división vale 0.001 in (25 divisiones por vuelta).",
+        "Suma décimas + divisiones de 0.025 + tambor."],
+        ex: "0.300 + 0.050 + 0.017 = 0.367 in" };
+    }
+    if(u === "mm"){
+      return { steps: [contact,
+        "En el contador pequeño, cuenta las vueltas completas de la aguja grande: cada vuelta vale 1 mm.",
+        "En la carátula grande, cada división vale 0.01 mm y cada número 0.10 mm.",
+        "Suma vueltas y divisiones."],
+        ex: "3 vueltas + 47 divisiones = 3.47 mm" };
+    }
+    return { steps: [contact,
+      "En el contador pequeño, cuenta las vueltas completas: cada vuelta vale 0.100 in.",
+      "En la carátula grande, cada división vale 0.001 in.",
+      "Suma vueltas y divisiones."],
+      ex: "2 vueltas + 36 divisiones = 0.236 in" };
+  }
+  function renderHowto(){
+    const box = el("howto"); if(!box) return;
+    box.hidden = state.mode !== "practica";
+    const h = howtoSteps();
+    el("howtoBody").innerHTML = `<ol>${h.steps.map(s=>`<li>${s}</li>`).join("")}</ol>
+      <span class="ex">Ejemplo: ${h.ex}</span>
+      <p class="kbd">En modo Práctica tienes ${MAX_TRIES} intentos por pieza; si fallas, el simulador te dice en qué parte de la lectura está el error. Con teclado: Tab hasta el instrumento, flechas para moverlo, Enter para llevarlo al contacto.</p>`;
+  }
+
+  // ---------- diagnóstico del error de lectura ----------
+  const DIAG_LABELS = {
+    unidad: "unidad equivocada", decimal: "punto decimal", escala_principal: "escala principal (regla)",
+    nonio: "nonio", medio_mm: "marca de medio milímetro", manguito: "manguito", tambor: "tambor",
+    vueltas: "contador de vueltas", aguja: "aguja grande", otro: "otro"
+  };
+  function diagnose(unit, uConf, entered, correct){
+    const d = entered - correct, ad = Math.abs(d), tol = uConf.resolution + 1e-6;
+    if(ad <= tol) return { code: "", msg: "" };
+    const inch = unit !== "mm", k = state.instrument;
+    if(inch && Math.abs(entered - correct*MM_PER_IN) <= Math.max(uConf.resolution*MM_PER_IN, .06))
+      return { code: "unidad", msg: "Parece que escribiste la medida en milímetros, pero esta pieza pide pulgadas. Lee la escala en pulgadas del instrumento." };
+    if(!inch && Math.abs(entered - correct/MM_PER_IN) <= .004)
+      return { code: "unidad", msg: "Parece que escribiste la medida en pulgadas, pero esta pieza pide milímetros. Lee la escala en milímetros del instrumento." };
+    for(const f of [10, 100, 1000]){
+      if(Math.abs(entered/f - correct) <= tol || Math.abs(entered*f - correct) <= tol)
+        return { code: "decimal", msg: "Los dígitos parecen correctos, pero el punto decimal está fuera de lugar." };
+    }
+    // ¿la diferencia es un múltiplo exacto del paso indicado? (el error está en una sola parte de la lectura)
+    const multipleOf = step => { const m = Math.round(d/step); return m !== 0 && Math.abs(d - m*step) <= tol ? m : 0; };
+    const sobra = m => (d > 0 ? "te sobra" : "te falta") + (Math.abs(m) === 1 ? "" : "n");
+    if(k === "vernier"){
+      const big = unit === "mm" ? 1 : (unit === "infrac" || state.vres.in === "128" ? 1/16 : .025);
+      const bigTxt = unit === "mm" ? "mm" : (big === 1/16 ? "dieciseisavos de pulgada (1/16 in)" : "divisiones de 0.025 in");
+      const m = multipleOf(big);
+      if(m) return { code: "escala_principal", msg: `La parte del nonio está bien, pero no la de la regla: ${sobra(m)} ${Math.abs(m)} ${bigTxt}. Lee la regla hasta la última marca que queda antes del cero del nonio.` };
+      if(ad < big) return { code: "nonio", msg: "La lectura de la regla está bien; el error está en el nonio. Busca la única línea del nonio que coincide exactamente con una línea de la regla (puedes activar la ayuda de lectura)." };
+    }
+    if(k === "micrometro"){
+      if(!inch){
+        if(Math.abs(ad - .5) <= tol) return { code: "medio_mm", msg: `Revisa la marca de medio milímetro: ${d > 0 ? "sumaste 0.50 mm de más" : "te faltó sumar 0.50 mm"}. Fíjate si después del último milímetro entero ya se ve una línea en la parte de abajo del manguito.` };
+        const m = multipleOf(.5);
+        if(m) return { code: "manguito", msg: `La lectura del tambor está bien, pero no la del manguito: ${sobra(2)} ${Math.abs(m*.5).toFixed(1)} mm. Cuenta otra vez los milímetros visibles.` };
+        if(ad < .5) return { code: "tambor", msg: "El manguito está bien leído; el error está en el tambor. Toma la división que queda alineada con la línea horizontal del manguito (cada división vale 0.01 mm)." };
+      } else {
+        const m = multipleOf(.025);
+        if(m) return { code: "manguito", msg: `La lectura del tambor está bien, pero no la del manguito: ${sobra(m)} ${Math.abs(m)} división(es) de 0.025 in.` };
+        if(ad < .025) return { code: "tambor", msg: "El manguito está bien leído; el error está en el tambor (cada división vale 0.001 in)." };
+      }
+    }
+    if(k === "comparador"){
+      const rev = inch ? .1 : 1;
+      const m = multipleOf(rev);
+      if(m) return { code: "vueltas", msg: `La aguja grande está bien leída, pero ${sobra(m)} ${Math.abs(m)} vuelta(s). Cuenta las vueltas en el contador pequeño (cada vuelta = ${inch ? "0.100 in" : "1 mm"}).` };
+      if(ad < rev) return { code: "aguja", msg: `Las vueltas están bien; revisa la aguja grande (cada división vale ${inch ? "0.001 in" : "0.01 mm"} y cada número ${inch ? "0.010 in" : "0.10 mm"}).` };
+    }
+    return { code: "otro", msg: "Hay errores en más de una parte de la lectura. Repasa los pasos de la guía rápida y vuelve a intentarlo." };
   }
 
   function newPiece(){
     const inst = INSTRUMENTS[state.instrument];
+    const units = unitsOf(state.instrument);
+    state.answerUnit = state.unitByInst[state.instrument] || "mm";
+    if(!units[state.answerUnit]) state.answerUnit = units.in && state.answerUnit === "infrac" ? "in" : "mm";
     state.currentValueMM = inst.genValueMM();
     sim.p = null;
     state.pieceShownAt = Date.now();
-    state.answerUnit = state.unitByInst[state.instrument] || "mm";
-    if(!inst.units[state.answerUnit]) state.answerUnit = "mm";
+    state.tries = 0;
+    state.pieceId++;
     document.getElementById("instTitle").textContent = inst.label;
-    document.getElementById("instMeta").innerHTML = `${inst.metaMM}<br>${inst.metaIN}`;
+    document.getElementById("instMeta").innerHTML = metaOf(state.instrument);
     document.getElementById("readingInput").value = "";
     state.answered = false;
     if(!state.evalActive){
@@ -1003,8 +1340,7 @@
       setUnitSegDisabled(false);
     }
     updateUnitUI();
-    document.getElementById("feedback").className = "feedback";
-    document.getElementById("feedback").innerHTML = "Escribe tu lectura y presiona Verificar.";
+    setFeedback("", "Lleva el instrumento hasta la pieza, escribe tu lectura y presiona Verificar.", "Mide la pieza y escribe tu lectura.");
     document.getElementById("summaryHolder").innerHTML = "";
     renderSVG();
     updateProgressLine();
@@ -1046,8 +1382,7 @@
 
   function correctValueInUnit(unit){
     const raw = unit==="mm" ? state.currentValueMM : state.currentValueMM/MM_PER_IN;
-    const inst = INSTRUMENTS[state.instrument];
-    const uConf = inst.units[unit];
+    const uConf = unitsOf(state.instrument)[unit];
     // Se redondea a la resolución propia de esa escala/unidad: es lo máximo que
     // un instrumento real permite leer, y evita un "error" residual falso cuando
     // el alumno responde exactamente la fracción/número que marca la escala.
@@ -1059,23 +1394,21 @@
   }
 
   function submitReading(){
-    const inst = INSTRUMENTS[state.instrument];
     const unit = state.answerUnit;
-    const uConf = inst.units[unit];
+    const uConf = unitsOf(state.instrument)[unit];
     const raw = document.getElementById("readingInput").value;
     if(state.answered) return;
-    if(raw === "") return;
+    if(raw === ""){
+      setFeedback("bad", `<span class="big">✗ Falta tu lectura</span>Escribe el valor que marca el instrumento.`, "✗ Escribe tu lectura.");
+      return;
+    }
     if(sim.api && !sim.api.seated()){
-      const fb0 = document.getElementById("feedback");
-      fb0.className = "feedback bad";
-      fb0.innerHTML = `<span class="big">Falta medir la pieza</span>Primero lleva el instrumento hasta el contacto con la pieza; después toma tu lectura.`;
+      setFeedback("bad", `<span class="big">✗ Falta medir la pieza</span>Primero lleva el instrumento hasta el contacto con la pieza; después toma tu lectura.`, "✗ Primero lleva el instrumento hasta la pieza.");
       return;
     }
     const entered = uConf.isFraction ? parseFractionToDecimal(raw) : parseFloat(raw);
     if(isNaN(entered)){
-      const fb = document.getElementById("feedback");
-      fb.className = "feedback bad";
-      fb.innerHTML = `<span class="big">Formato no válido</span>Escribe una fracción como 5/${uConf.fracDen} o un número mixto como 1 3/${uConf.fracDen}.`;
+      setFeedback("bad", `<span class="big">✗ Formato no válido</span>Escribe una fracción como 5/${uConf.fracDen} o un número mixto como 1 3/${uConf.fracDen}.`, "✗ Formato no válido.");
       return;
     }
     const correct = correctValueInUnit(unit);
@@ -1084,29 +1417,47 @@
     const enteredExact = uConf.isFraction ? raw.trim() : entered.toFixed(uConf.decimals);
     const unitDisplay = UNIT_NAMES[unit] || unit;
     const tiempoRespuestaSegundos = state.pieceShownAt ? Math.round((Date.now() - state.pieceShownAt)/10)/100 : null;
-    const record = { inst: state.instrument, mode: state.mode, unit, unitDisplay, value: correct, entered, enteredDisplay, enteredExact, error, ts: new Date().toISOString(), tiempoRespuestaSegundos };
+    const okness = error <= uConf.resolution + 1e-6;
+    const dg = diagnose(unit, uConf, entered, correct);
+    state.tries++;
+    const record = { inst: state.instrument, mode: state.mode, unit, unitDisplay, value: correct, entered, enteredDisplay, enteredExact, error,
+      ts: new Date().toISOString(), tiempoRespuestaSegundos, intento: state.tries, diag: dg.code, piece: state.pieceId,
+      res: uConf.resolution, decimals: uConf.decimals, isFraction: !!uConf.isFraction, fracDen: uConf.fracDen };
     state.history.push(record);
     sendToSheet(record);
 
-    const fb = document.getElementById("feedback");
     const correctLabel = uConf.isFraction
       ? `${formatFraction(correct, uConf.fracDen)} (${correct.toFixed(4)} in)`
       : `${correct.toFixed(uConf.decimals)} ${unit}`;
     if(state.mode === "practica"){
-      const okness = error <= uConf.resolution + 1e-6;
-      fb.className = "feedback " + (okness?"good":"bad");
-      fb.innerHTML = `<span class="big">${okness? "Correcto" : "Fuera de tolerancia"}</span>
-        Valor real: ${correctLabel} · Tu lectura: ${enteredDisplay} · Error: ${error.toFixed(uConf.decimals)} ${unit==="mm"?"mm":"in"}<br>Pulsa <strong>Nueva pieza</strong> para seguir practicando.`;
-      state.answered = true;
-      document.getElementById("submitBtn").disabled = true;
-      document.getElementById("readingInput").disabled = true;
-      setUnitSegDisabled(true);
+      const last = okness || state.tries >= MAX_TRIES;
+      if(last){
+        const head = okness
+          ? `✓ Correcto${state.tries > 1 ? ` (intento ${state.tries})` : ""}`
+          : `✗ Fuera de tolerancia — se acabaron los ${MAX_TRIES} intentos`;
+        setFeedback(okness ? "good" : "bad",
+          `<span class="big">${head}</span>
+          Valor real: ${correctLabel} · Tu lectura: ${enteredDisplay} · Error: ${error.toFixed(uConf.decimals)} ${unit==="mm"?"mm":"in"}
+          ${okness ? "" : `<span class="diag">${dg.msg}</span>`}
+          <br>Pulsa <strong>Nueva pieza</strong> para seguir practicando.`,
+          okness ? `✓ Correcto · valor real ${correctLabel}` : `✗ Valor real ${correctLabel}. Pulsa Nueva pieza.`);
+        state.answered = true;
+        document.getElementById("submitBtn").disabled = true;
+        document.getElementById("readingInput").disabled = true;
+        setUnitSegDisabled(true);
+      } else {
+        const left = MAX_TRIES - state.tries;
+        setFeedback("bad",
+          `<span class="big">✗ Fuera de tolerancia · intento ${state.tries} de ${MAX_TRIES}</span>
+          <span class="diag">${dg.msg}</span>Observa otra vez el instrumento y corrige tu lectura (te ${left === 1 ? "queda 1 intento" : `quedan ${left} intentos`}).`,
+          `✗ Intento ${state.tries} de ${MAX_TRIES}: ${dg.msg}`);
+        const inp = el("readingInput"); inp.focus(); inp.select();
+      }
       renderHistory();
       updateProgressLine();
     } else {
       state.evalCount++;
-      fb.className = "feedback";
-      fb.innerHTML = `Lectura registrada (${state.evalCount} de ${state.evalTarget}). Continúa con la siguiente pieza.`;
+      setFeedback("", `Lectura registrada (${state.evalCount} de ${state.evalTarget}). Continúa con la siguiente pieza.`, `Registrada ${state.evalCount} de ${state.evalTarget}.`);
       document.getElementById("readingInput").value = "";
       if(state.evalCount >= state.evalTarget){
         finishEvaluation();
@@ -1118,10 +1469,12 @@
 
   function newPieceKeepMode(){
     const inst = INSTRUMENTS[state.instrument];
+    randomizeAnswerUnit();
     state.currentValueMM = inst.genValueMM();
     sim.p = null;
     state.pieceShownAt = Date.now();
-    randomizeAnswerUnit();
+    state.tries = 0;
+    state.pieceId++;
     updateUnitUI();
     renderSVG();
     updateProgressLine();
@@ -1135,25 +1488,30 @@
     document.getElementById("readingInput").disabled = true;
     setUnitSegDisabled(true);
     const recs = state.history.filter(h=>h.mode==="evaluacion" && h.inst===state.instrument).slice(-state.evalTarget);
-    const withinTol = recs.filter(r=> r.error <= inst.units[r.unit].resolution + 1e-6).length;
+    const withinTol = recs.filter(r=> r.error <= r.res + 1e-6).length;
     const meanOf = list => list.length ? list.reduce((a,r)=>a+r.error,0)/list.length : null;
-    const breakdownLines = Object.keys(inst.units).map(u=>{
+    // errores más frecuentes según el diagnóstico automático
+    const counts = {};
+    recs.forEach(r=>{ if(r.diag) counts[r.diag] = (counts[r.diag]||0) + 1; });
+    const freq = Object.keys(counts).sort((a,b)=>counts[b]-counts[a]).map(c=>`${DIAG_LABELS[c]||c} (${counts[c]})`).join(", ");
+    const breakdownLines = Object.keys(unitsOf(state.instrument)).map(u=>{
       const list = recs.filter(r=>r.unit===u);
       if(!list.length) return "";
       const mean = meanOf(list);
       const unitDisplay = u==="mm" ? "mm" : "in";
       return `error medio en ${UNIT_NAMES[u] || u}: ${mean.toFixed(4)} ${unitDisplay} (${list.length} lecturas)<br>`;
     }).join("");
-    document.getElementById("feedback").className = "feedback good";
     const closeReason = closedByTime
       ? `Se acabó el tiempo — evaluación cerrada automáticamente.`
       : `Evaluación completa`;
-    document.getElementById("feedback").innerHTML = `<span class="big">${closeReason}</span>Se registraron ${recs.length} lecturas (unidad asignada al azar en cada pieza).`;
+    setFeedback("good", `<span class="big">${closeReason}</span>Se registraron ${recs.length} lecturas (unidad asignada al azar en cada pieza).`,
+      `${closeReason} · ${withinTol}/${recs.length} dentro de tolerancia`);
     document.getElementById("summaryHolder").innerHTML = `
       <div class="summary">
         <div class="big">${withinTol}/${recs.length}</div>
         lecturas dentro de tolerancia<br>
         ${breakdownLines}
+        ${freq ? `errores más frecuentes: ${freq}` : ""}
       </div>`;
     renderHistory();
     updateProgressLine();
@@ -1162,14 +1520,15 @@
   function renderHistory(){
     const body = document.getElementById("historyBody");
     const rows = state.history.filter(h=>h.inst===state.instrument).slice(-30).reverse();
-    const inst = INSTRUMENTS[state.instrument];
     body.innerHTML = rows.map((r,idx)=>{
-      const uConf = inst.units[r.unit];
-      const okness = r.error <= uConf.resolution + 1e-6;
-      const entered = r.enteredDisplay || `${r.entered.toFixed(uConf.decimals)} ${r.unit}`;
-      const correct = uConf.isFraction ? `${formatFraction(r.value, uConf.fracDen)}` : `${r.value.toFixed(uConf.decimals)} ${r.unit}`;
+      const okness = r.error <= r.res + 1e-6;
+      const entered = r.enteredDisplay || `${r.entered.toFixed(r.decimals)} ${r.unit}`;
+      // en práctica, el valor correcto de un intento fallido no se muestra hasta cerrar la pieza
+      const hidden = r.mode === "practica" && r.piece === state.pieceId && !state.answered;
+      const correct = hidden ? "?" : (r.isFraction ? `${formatFraction(r.value, r.fracDen)}` : `${r.value.toFixed(r.decimals)} ${r.unit}`);
       const tiempo = r.tiempoRespuestaSegundos != null ? `${r.tiempoRespuestaSegundos.toFixed(1)} s` : "—";
-      return `<tr><td>${rows.length-idx}</td><td>${entered}</td><td>${correct}</td><td class="err-cell ${okness?'good':'bad'}">${r.error.toFixed(uConf.decimals)}</td><td>${tiempo}</td></tr>`;
+      const err = hidden ? "—" : r.error.toFixed(r.decimals);
+      return `<tr><td>${rows.length-idx}</td><td>${entered}</td><td>${correct}</td><td class="err-cell ${okness?'good':'bad'}"><span class="err-sym" aria-label="${okness?'correcto':'incorrecto'}">${okness?'✓':'✗'}</span>${err}</td><td>${r.intento||1}</td><td>${tiempo}</td></tr>`;
     }).join("");
   }
 
@@ -1222,14 +1581,16 @@
   function downloadCSV(){
     if(state.history.length===0){ alert("Todavía no hay lecturas registradas."); return; }
     const name = document.getElementById("studentName").value.trim() || "anonimo";
-    let csv = "estudiante,instrumento,modo,unidad,valor_correcto,lectura_estudiante,lectura_texto,error,valor_correcto_mm,timestamp,tiempo_respuesta_s\n";
+    let csv = "estudiante,instrumento,modo,unidad,valor_correcto,lectura_estudiante,lectura_texto,error,valor_correcto_mm,timestamp,tiempo_respuesta_s,intento,tipo_error,resolucion\n";
+    const safeName = name.replace(/,/g, ";");
     state.history.forEach(r=>{
       const mmVal = r.unit==="mm" ? r.value : r.value*MM_PER_IN;
       const texto = (r.enteredDisplay || "").replace(/,/g, ";");
       const exacto = (r.enteredExact != null ? r.enteredExact : r.entered.toFixed(4)).toString().replace(/,/g, ";");
       const tiempo = r.tiempoRespuestaSegundos != null ? r.tiempoRespuestaSegundos : "";
-      csv += `${name},${r.inst},${r.mode},${r.unit},${r.value.toFixed(4)},${exacto},${texto},${r.error.toFixed(4)},${mmVal.toFixed(4)},${r.ts},${tiempo}\n`;
+      csv += `${safeName},${r.inst},${r.mode},${r.unit},${r.value.toFixed(4)},${exacto},${texto},${r.error.toFixed(4)},${mmVal.toFixed(4)},${r.ts},${tiempo},${r.intento||1},${r.diag||""},${+r.res.toFixed(6)}\n`;
     });
+    state.downloadedCount = state.history.length;
     const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -1241,8 +1602,21 @@
     URL.revokeObjectURL(url);
   }
 
+  // Antes de borrar la bitácora se avisa y se ofrece descargar el CSV.
+  function askReset(){
+    const n = state.history.length;
+    const dlg = el("resetDlg");
+    if(n === 0 || !dlg.showModal){ resetSession(); return; }
+    const pending = n - (state.downloadedCount || 0);
+    el("resetText").textContent = `Se borrarán las ${n} lecturas de la bitácora de este dispositivo` +
+      (pending > 0 ? `; ${pending} de ellas no se han descargado en CSV.` : ". Ya descargaste el CSV con todas ellas.") +
+      " Las lecturas que ya se enviaron a la hoja de registro no se borran.";
+    dlg.showModal();
+  }
+
   function resetSession(){
-    state.history = state.history.filter(h=>false); // clear all
+    state.history = [];
+    state.downloadedCount = 0;
     state.evalActive = false;
     state.evalCount = 0;
     stopEvalTimer();
@@ -1266,17 +1640,43 @@
   document.getElementById("unitSeg").addEventListener("click", (e)=>{
     const btn = e.target.closest("button");
     if(!btn || btn.disabled) return;
-    state.answerUnit = btn.dataset.unit;
-    state.unitByInst[state.instrument] = state.answerUnit;
-    updateUnitUI();
-    renderSVG();
+    state.unitByInst[state.instrument] = btn.dataset.unit;
+    // pieza nueva generada para esa unidad (así siempre hay una línea del nonio que coincide)
+    newPiece();
   });
   document.getElementById("newPieceBtn").addEventListener("click", newPiece);
   document.getElementById("submitBtn").addEventListener("click", submitReading);
   document.getElementById("readingInput").addEventListener("keydown", (e)=>{ if(e.key==="Enter") submitReading(); });
   document.getElementById("helpToggle").addEventListener("change", renderSVG);
   document.getElementById("downloadBtn").addEventListener("click", downloadCSV);
-  document.getElementById("resetBtn").addEventListener("click", resetSession);
+  document.getElementById("resetBtn").addEventListener("click", askReset);
+  el("resetCancel").addEventListener("click", ()=> el("resetDlg").close());
+  el("resetNoSave").addEventListener("click", ()=>{ el("resetDlg").close(); resetSession(); });
+  el("resetSave").addEventListener("click", ()=>{ downloadCSV(); el("resetDlg").close(); resetSession(); });
+
+  // Preferencias que se recuerdan en este dispositivo
+  const PREFS_KEY = "metrologia_sim_prefs";
+  const prefs = (()=>{ try{ return JSON.parse(localStorage.getItem(PREFS_KEY) || "{}"); }catch(e){ return {}; } })();
+  const savePrefs = () => { try{ localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); }catch(e){ /* no crítico */ } };
+  function applyPrefs(){
+    document.body.classList.toggle("bigtext", !!prefs.bigText);
+    document.body.classList.toggle("cb", !!prefs.cb);
+    el("bigTextToggle").checked = !!prefs.bigText;
+    el("cbToggle").checked = !!prefs.cb;
+    if(prefs.sound === false) el("soundToggle").checked = false;
+    if(prefs.vres && VRES.mm[prefs.vres.mm] && VRES.in[prefs.vres.in]) state.vres = { mm: prefs.vres.mm, in: prefs.vres.in };
+  }
+  el("bigTextToggle").addEventListener("change", e=>{ prefs.bigText = e.target.checked; savePrefs(); applyPrefs(); });
+  el("cbToggle").addEventListener("change", e=>{ prefs.cb = e.target.checked; savePrefs(); applyPrefs(); });
+  el("soundToggle").addEventListener("change", e=>{ prefs.sound = e.target.checked; savePrefs(); });
+  function onResChange(){
+    state.vres = { mm: el("resMM").value, in: el("resIN").value };
+    prefs.vres = state.vres; savePrefs();
+    if(state.unitByInst.vernier === "infrac" && state.vres.in !== "128") state.unitByInst.vernier = "in";
+    newPiece();
+  }
+  el("resMM").addEventListener("change", onResChange);
+  el("resIN").addEventListener("change", onResChange);
 
   // Recuerda el nombre del estudiante en este dispositivo/navegador, para que
   // no tenga que volver a escribirlo cada vez que abra el enlace.
@@ -1294,7 +1694,9 @@
     const savedName = localStorage.getItem(STUDENT_NAME_KEY);
     if(savedName) document.getElementById("studentName").value = savedName;
   }catch(err){ /* almacenamiento no disponible: no es crítico */ }
+  applyPrefs();
   newPiece();
+  flushQueue();
 
   if("serviceWorker" in navigator){
     window.addEventListener("load", ()=>{

@@ -16,7 +16,9 @@ Los instrumentos se dibujan con su aspecto físico real y se manipulan como los 
 | Micrómetro | 0.01 mm | 0.001 in |
 | Comparador de carátula | 0.01 mm | 0.001 in |
 
-**Funciones:** modo de práctica con retroalimentación inmediata y ayuda de alineación; modo de evaluación con número de piezas y tiempo límite configurables; bitácora de sesión con error y tiempo por lectura; descarga de resultados en CSV; y registro automático de cada lectura en una hoja de Google para investigación educativa.
+El vernier permite elegir la resolución del nonio: 0.05 o 0.02 mm, y 1/128 o 0.001 in.
+
+**Funciones:** modo de práctica con retroalimentación inmediata y ayuda de alineación, hasta tres intentos por pieza y un diagnóstico que indica en qué parte de la lectura está el error (regla o nonio, manguito o tambor, marca de medio milímetro, vueltas del comparador, unidad o punto decimal equivocados); guía rápida de lectura para cada instrumento; manejo con teclado; opciones de texto grande, colores para daltonismo y sonido; barra de respuesta fija en teléfonos; modo de evaluación con número de piezas y tiempo límite configurables; bitácora de sesión con error y tiempo por lectura; descarga de resultados en CSV (con intento, tipo de error y resolución); aviso antes de borrar la bitácora; y registro automático de cada lectura en una hoja de Google para investigación educativa. Si no hay internet, las lecturas se guardan en el dispositivo y se envían al volver la conexión. Al abrir la app desde `localhost` no se envía nada a la hoja, para no mezclar pruebas con datos reales.
 
 ## Cómo citar
 
