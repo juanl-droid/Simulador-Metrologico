@@ -275,10 +275,6 @@
   .simbtns #simClose{background:linear-gradient(#4f9a72,#2f7350);border-color:#6cbb90;border-bottom-color:#1c4a33;box-shadow:0 3px 0 #163a28,0 4px 8px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.25);color:#fff;}
   .simbtns #simClose:active{box-shadow:0 0 0 #163a28, inset 0 2px 5px rgba(0,0,0,.45);}
 
-  .vlook{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;color:var(--text-dim);}
-  .vlook[hidden]{display:none;}
-  .vlook input[type=range]{flex:1;accent-color:var(--amber);height:28px;}
-  .vlook input[type=range]:disabled{opacity:.5;}
 
   /* ---------- zona de respuesta destacada ---------- */
   .actionbar{background:linear-gradient(rgba(242,169,0,.18),rgba(242,169,0,.06));
@@ -781,120 +777,105 @@
     </svg>`;
 
     // ================= 2) lupa sobre la regla y el nonio =================
-    const Z = 24, X0 = 120, XS = X0 + 12*Z;
-    const BY = 120, BH = 170, PH = 56;
-    const LY0 = BY - PH - 14, LH = BH + 2*PH + 30;          // franja visible de la lupa
-    const VWM = RM.n*SM*Z, VWI = RI.n*SI*IN*Z;             // largo de cada nonio (px)
-    const VW = Math.max(VWM, VWI);
-    const PL = XS - 30, PR = XS + VW + 96;                 // extremos de las placas del nonio
-    const BEAM_R = XS + (MAX + 4)*Z + (PR - X0);
-    const W = BEAM_R + 40;
+    // La lupa se dibuja a 1:1 en píxeles de pantalla, con una escala Z (px por mm) calculada para que el
+    // NONIO COMPLETO que se está leyendo quepa siempre en el ancho disponible, junto con la marca anterior
+    // de la regla. Los números y el grosor de las líneas tienen tamaño fijo legible (no se encogen con el
+    // dibujo). Si cambia el ancho (girar el teléfono, cambiar la ventana) la lupa se vuelve a dibujar.
+    // La vista no se desplaza a mano: el cero del nonio queda siempre en el mismo lugar.
+    const PH = 44, BY = 48, BH = 136, LH = BY + BH + PH + 4; // placas, regla y alto total (px)
+    const XS = 220;                                          // posición del cero de la regla en el dibujo
+    const LNONIO = isMM ? RM.n*SM : RI.n*SI*IN;               // largo del nonio que se está leyendo (mm)
+    const clampN = (v, a, b) => Math.min(b, Math.max(a, v));
+    let Zc = 0, PADL = 0;                                    // escala vigente y espacio a la izquierda del cero
 
-    let sc = "";
-    for(let mm=0; mm<=MAX+(PR-XS)/Z; mm++){
-      const x = XS + mm*Z, maj = mm%10===0, mid = mm%5===0;
-      sc += vline(x, BY+BH, BY+BH-(maj?50:(mid?38:26)), maj?2.6:1.8);
-      if(maj) sc += txt(x+6, BY+BH-58, mm, 28, {a:"start", w:700});
-      else if(mid) sc += txt(x, BY+BH-44, mm, 15, {w:600, fill:"#3d4852"});
+    function calcZ(){
+      const c = el("vScroll"), cw = (c && c.clientWidth) || 600;
+      // nonio completo + ~5 mm a la izquierda (marca anterior de la regla) + ~3 mm a la derecha
+      return { cw, Z: clampN((cw - 24)/(LNONIO + 8), 4, 24) };
     }
-    const beamIn = (MAX+(PR-XS)/Z)/IN;
-    if(state.vres.in === "128"){
-      for(let s=0; s<=Math.floor(beamIn*16); s++){
-        const x = XS + s*IN/16*Z, w = s%16===0, h = s%8===0, q = s%4===0, e8 = s%2===0;
-        sc += vline(x, BY, BY+(w?50:(h?42:(q?34:(e8?27:19)))), w?2.6:1.8);
-        if(w) sc += txt(x+6, BY+76, s/16, 28, {a:"start", w:700});
-        else if(q){
-          // cada cuarto lleva su pulgada (3¼, 3½, 3¾) para saber siempre en qué pulgada se está
-          const whole = Math.floor(s/16), fr = ["","¼","½","¾"][(s%16)/4];
-          sc += txt(x, BY+66, (whole ? whole : "") + fr, 21, {w:700, fill:"#2b3640"});
+
+    function lupaContent(Z, cw){
+      const big = clampN(Z*1.1, 15, 26), lab = clampN(Z*.8, 12, 18), sw = Z >= 12 ? 1.8 : 1.3;
+      const SMZ = SM*Z, SIZ = SI*IN*Z;
+      const endMM = MAX + LNONIO + 20 + cw/Z;                // largo de regla que hay que dibujar (mm)
+      let sc = `<rect x="0" y="${BY}" width="${n2(XS + endMM*Z)}" height="${BH}" fill="url(#g-steel)" stroke="#5b6771"/>`;
+      // --- regla en mm (abajo) ---
+      const showMid = 5*Z >= 34, showAll = Z >= 18;
+      for(let mm=0; mm<=endMM; mm++){
+        const x = XS + mm*Z, maj = mm%10===0, mid = mm%5===0;
+        sc += vline(x, BY+BH, BY+BH-(maj?36:(mid?28:19)), maj ? sw+.8 : sw);
+        if(maj) sc += txt(x+4, BY+BH-42, mm, big, {a:"start", w:700});
+        else if(mid && showMid) sc += txt(x, BY+BH-33, mm, 12, {w:600, fill:"#3d4852"});
+        else if(showAll && !mid) {/* sin número en cada mm: como en el instrumento real */}
+      }
+      // --- regla en pulgadas (arriba) ---
+      if(state.vres.in === "128"){
+        const qLab = 6.35*Z >= 40, hLab = 12.7*Z >= 40;
+        for(let s16=0; s16<=Math.floor(endMM/IN*16); s16++){
+          const x = XS + s16*IN/16*Z, w = s16%16===0, h = s16%8===0, q = s16%4===0, e8 = s16%2===0;
+          sc += vline(x, BY, BY+(w?36:(h?30:(q?25:(e8?19:13)))), w ? sw+.8 : sw);
+          const whole = Math.floor(s16/16);
+          if(w) sc += txt(x+4, BY+58, whole, big, {a:"start", w:700});
+          else if((q && qLab) || (h && hLab)) sc += txt(x, BY+50, (whole ? whole : "") + ["","¼","½","¾"][(s16%16)/4], lab, {w:700, fill:"#2b3640"});
+        }
+      } else {
+        const tLab = 2.54*Z >= 30;
+        for(let s=0; s<=Math.floor(endMM/IN*40); s++){
+          const x = XS + s*.025*IN*Z, w = s%40===0, t = s%4===0, h = s%2===0;
+          sc += vline(x, BY, BY+(w?36:(t?29:(h?21:15))), w ? sw+.8 : sw);
+          if(w) sc += txt(x+4, BY+58, s/40, big, {a:"start", w:700});
+          else if(t && (tLab || (s/4)%5===0)) sc += txt(x, BY+50, `${Math.floor(s/40)}.${(s/4)%10}`, lab, {w:700, fill:"#2b3640"});
         }
       }
-    } else {
-      for(let s=0; s<=Math.floor(beamIn*40); s++){
-        const x = XS + s*.025*IN*Z, w = s%40===0, t = s%4===0, h = s%2===0;
-        sc += vline(x, BY, BY+(w?50:(t?40:(h?29:21))), w?2.6:1.8);
-        if(w) sc += txt(x+6, BY+76, s/40, 28, {a:"start", w:700});
-        else if(t) sc += txt(x, BY+62, `${Math.floor(s/40)}.${(s/4)%10}`, 17, {w:700, fill:"#2b3640"});
+      // --- nonio (en la corredera) ---
+      let vn = "";
+      const labM = RM.lab*SMZ >= 18 ? RM.lab : RM.lab*2;     // si los números quedan muy juntos, uno sí y uno no
+      for(let i=0;i<=RM.n;i++){
+        const x = XS + i*SMZ, labeled = i%RM.lab===0;
+        vn += vline(x, BY+BH, BY+BH+(i===0?30:(labeled?23:14)), i===0 ? 3.6 : sw);
+        if(i%labM===0) vn += txt(x, BY+BH+38, i/RM.lab, lab, {w:700});
       }
-    }
-    sc += txt(XS-14, BY+BH-12, "mm", 16, {a:"end", w:700, fill:"#3d4852"});
-    sc += txt(XS-14, BY+26, "in", 16, {a:"end", w:700, fill:"#3d4852"});
-
-    let vn = "";
-    for(let i=0;i<=RM.n;i++){
-      const x = XS + i*SM*Z, labeled = i%RM.lab===0;
-      vn += vline(x, BY+BH, BY+BH+(i===0?36:(labeled?30:19)), i===0 ? 4.5 : (RM.n > 20 ? 1.6 : 2));
-      if(labeled) vn += txt(x, BY+BH+50, i/RM.lab, 19, {w:700});
-    }
-    vn += txt(XS+VWM+34, BY+BH+24, RM.label, 15, {a:"start", w:700});
-    for(let i=0;i<=RI.n;i++){
-      const x = XS + i*SI*IN*Z, labeled = i%RI.lab===0;
-      vn += vline(x, BY, BY-(i===0?36:(labeled?30:19)), i===0 ? 4.5 : 2);
-      if(labeled) vn += txt(x, BY-36, i, 19, {w:700});
-    }
-    vn += txt(XS+VWI+40, BY-36, state.vres.in === "128" ? "1/128 in" : "0.001 in", 15, {a:"start", w:700});
-
-    const screw = (x,y) => `<circle cx="${n2(x)}" cy="${y}" r="6" fill="#262d33"/><path d="M${n2(x-4)} ${y}h8M${n2(x)} ${y-4}v8" stroke="#8c979f" stroke-width="1.2"/>`;
-    const lSlider = `
-        <rect x="${X0}" y="${BY-PH}" width="${n2(PR-X0)}" height="${PH}" rx="3" fill="url(#g-steel2)" stroke="#4d5861"/>
-        <rect x="${X0}" y="${BY+BH}" width="${n2(PR-X0)}" height="${PH}" rx="3" fill="url(#g-steel2)" stroke="#4d5861"/>
-        <rect x="${PL}" y="${BY-PH+4}" width="${n2(PR-PL-8)}" height="${PH-4}" fill="url(#g-steel)" stroke="#5b6771"/>
-        <rect x="${PL}" y="${BY+BH}" width="${n2(PR-PL-8)}" height="${PH-4}" fill="url(#g-steel)" stroke="#5b6771"/>
-        ${screw(PR-22, BY-PH+16)}${screw(PR-22, BY+BH+PH-16)}
+      const labI = RI.lab*SIZ >= 18 ? RI.lab : RI.lab*2;
+      for(let i=0;i<=RI.n;i++){
+        const x = XS + i*SIZ, labeled = i%RI.lab===0;
+        vn += vline(x, BY, BY-(i===0?30:(labeled?23:14)), i===0 ? 3.6 : sw);
+        if(i%labI===0) vn += txt(x, BY-30, i, lab, {w:700});
+      }
+      const PL = XS - 92, PR = XS + Math.max(RM.n*SMZ, RI.n*SIZ) + 40;
+      const plates = `
+        <rect x="${PL}" y="${BY-PH}" width="${n2(PR-PL)}" height="${PH}" rx="3" fill="url(#g-steel)" stroke="#4d5861"/>
+        <rect x="${PL}" y="${BY+BH}" width="${n2(PR-PL)}" height="${PH}" rx="3" fill="url(#g-steel)" stroke="#4d5861"/>
         ${vn}
-        <rect x="${X0-10}" y="${LY0}" width="${n2(PR-X0+20)}" height="${LH}" fill="transparent"/>`;
+        <rect x="${PL}" y="0" width="${n2(PR-PL)}" height="${LH}" fill="transparent"/>`;
+      return `${sc}
+        <g id="vSlider" style="cursor:grab">${plates}</g>
+        <g id="vZero" style="display:none"><path d="${isMM ? `M${XS} ${BY+BH+3} l-7 -12 h14z` : `M${XS} ${BY-3} l-7 12 h14z`}" fill="${HELP}"/></g>
+        <line id="vHelp" x1="0" x2="0" y1="0" y2="0" stroke="${HELP}" stroke-width="3" stroke-dasharray="9,5" style="display:none"/>`;
+    }
 
-    const lupa = `<div class="lupa"><div class="lupa-tag">Lupa · regla y nonio (sigue a la corredera; arrastra aquí para el ajuste fino)</div>
-      <div class="vscroll" id="vScroll" style="overflow:hidden"><svg class="instrument-svg lupa-svg" id="simLupa" width="100%" height="${LH}" viewBox="0 ${LY0} ${n2(W)} ${LH}" preserveAspectRatio="xMinYMin meet" style="width:100%;border:0;border-radius:0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ampliación de la regla y el nonio">
-      <rect x="${X0-110}" y="${BY}" width="${n2(BEAM_R-X0+110)}" height="${BH}" rx="3" fill="url(#g-steel)" stroke="#5b6771"/>
-      ${sc}
-      <g id="vSlider" style="cursor:grab;touch-action:none">${lSlider}</g>
-      <g id="vZero" style="display:none"><path d="${isMM ? `M${XS} ${BY+BH+3} l-9 -15 h18z` : `M${XS} ${BY-3} l-9 15 h18z`}" fill="${HELP}"/></g>
-      <line id="vHelp" x1="0" x2="0" y1="0" y2="0" stroke="${HELP}" stroke-width="4" stroke-dasharray="10,5" style="display:none"/>
-    </svg></div>
-      <div class="vlook" id="vLookRow" hidden><span>◀</span><label for="vLook">Recorrer el nonio</label><input type="range" id="vLook" min="0" max="1000" value="0" aria-label="Recorrer el nonio a lo largo de la lupa"><span>▶</span></div>
+    const lupa = `<div class="lupa"><div class="lupa-tag">Lupa · nonio completo de ${isMM ? RM.label : (state.vres.in === "128" ? "1/128 in" : "0.001 in")} (arrastra aquí para el ajuste fino)</div>
+      <div class="vscroll" id="vScroll" style="overflow:hidden"><svg class="instrument-svg lupa-svg" id="simLupa" width="100%" height="${LH}" viewBox="0 0 600 ${LH}" style="width:100%;border:0;border-radius:0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ampliación de la regla y el nonio completo"></svg></div>
     </div>`;
 
-    // La lupa no se desplaza con el dedo (la inercia la descentraba): su ventana (viewBox) se recalcula
-    // en cada movimiento. Si el nonio activo cabe, queda completo y centrado desde su cero. Si no cabe
-    // (nonio de 0.02 mm, 49 mm de largo), la lupa conserva un tamaño legible y aparece el control
-    // «Recorrer el nonio»; con la ayuda activada, se coloca sola sobre la línea que coincide.
-    const VWA = isMM ? VWM : VWI;                           // largo del nonio que se está leyendo
-    const KMIN = VWA > 600 ? .8 : .5;                       // tamaño mínimo de la lupa
-    let look = 0;                                           // posición del control «Recorrer el nonio» (0 a 1)
+    // Redibuja la lupa si cambió el ancho disponible, y coloca la ventana para que el cero del nonio
+    // quede siempre en el mismo lugar con el nonio completo a la vista.
     function follow(){
-      const c = el("vScroll"), sv = el("simLupa"); if(!c || !sv) return;
-      const cw = c.clientWidth || 600;
-      const k = Math.min(1, Math.max(KMIN, cw/(VWA + 300)));
-      const viewW = cw/k, zeroX = XS + sim.p*Z;
-      const fits = VWA + 70 <= viewW;
-      let x0;
-      if(fits){
-        x0 = zeroX - Math.max(30/k, (viewW - VWA)/2);
-      } else {
-        const maxShift = VWA + 70 - viewW;                  // cuánto se puede recorrer (unidades del dibujo)
-        let shift = look*maxShift;
-        const h = el("vHelp");
-        if(help && h && h.style.display !== "none"){
-          shift = Math.min(maxShift, Math.max(0, (+h.getAttribute("x1") - zeroX) - viewW/2 + 40));
-          look = maxShift ? shift/maxShift : 0;
-        }
-        x0 = zeroX - 40 + shift;
+      const sv = el("simLupa"); if(!sv) return;
+      const { cw, Z } = calcZ();
+      if(Math.abs(Z - Zc) > .05 || !el("vSlider")){
+        Zc = Z;
+        sv.innerHTML = lupaContent(Zc, cw);
+        PADL = Math.max(5*Zc + 6, (cw - LNONIO*Zc)/2 - 4*Zc);
       }
-      const row = el("vLookRow"), rg = el("vLook");
-      if(row){ row.hidden = fits; }
-      if(rg){
-        if(!rg.dataset.bound){ rg.addEventListener("input", () => { look = rg.value/1000; follow(); }); rg.dataset.bound = "1"; }
-        rg.value = Math.round(look*1000);
-        rg.disabled = !!help;
-      }
-      sv.setAttribute("height", n2(LH*k));
-      sv.setAttribute("viewBox", `${n2(x0)} ${LY0} ${n2(viewW)} ${LH}`);
+      sv.setAttribute("height", LH);
+      sv.setAttribute("viewBox", `${n2(XS + sim.p*Zc - PADL)} 0 ${n2(cw)} ${LH}`);
     }
     let lastMM = Math.floor(sim.p);
     function update(){
       const p = sim.p;
       if(Math.floor(p) !== lastMM){ tickThrottled("slide", 35); lastMM = Math.floor(p); }
+      follow();
+      const Z = Zc;
       setAttr("voSlider", "transform", `translate(${n2(p*S)},0)`);
       setAttr("voRod", "width", n2(p*S));
       setAttr("vSlider", "transform", `translate(${n2(p*Z)},0)`);
@@ -907,14 +888,13 @@
         if(!help){ h.style.display = "none"; }
         else if(isMM){
           const n = ((Math.round(p/RM.resolution) % RM.n) + RM.n) % RM.n, x = XS + p*Z + n*SM*Z;
-          h.setAttribute("x1", n2(x)); h.setAttribute("x2", n2(x)); h.setAttribute("y1", BY+BH-60); h.setAttribute("y2", BY+BH+34); h.style.display = "";
+          h.setAttribute("x1", n2(x)); h.setAttribute("x2", n2(x)); h.setAttribute("y1", BY+BH-44); h.setAttribute("y2", BY+BH+28); h.style.display = "";
         } else {
           const r = unit === "infrac" ? 1/128 : RI.resolution;
           const n = ((Math.round(p/IN/r) % RI.n) + RI.n) % RI.n, x = XS + p*Z + n*SI*IN*Z;
-          h.setAttribute("x1", n2(x)); h.setAttribute("x2", n2(x)); h.setAttribute("y1", BY-34); h.setAttribute("y2", BY+60); h.style.display = "";
+          h.setAttribute("x1", n2(x)); h.setAttribute("x2", n2(x)); h.setAttribute("y1", BY-28); h.setAttribute("y2", BY+44); h.style.display = "";
         }
       }
-      follow();
     }
     const seated = () => sim.p - target < 1e-7;
     const clampP = v => Math.min(MAX, Math.max(target, v));
@@ -923,7 +903,7 @@
       touch: "pan-y",                                        // vista general: arrastre horizontal mueve la corredera
       lupaTouch: "pan-y",                                    // lupa: arrastre horizontal = ajuste fino de la corredera
       drag(dx){ sim.p = clampP(sim.p + dx/S); },
-      lupaDrag(dx){ sim.p = clampP(sim.p + dx/Z); },
+      lupaDrag(dx){ sim.p = clampP(sim.p + dx/(Zc || 24)); },
       key(dir, big){ sim.p = clampP(sim.p + dir*(big ? 5 : .5)); },
       contactSound: true,
       closeTo: target, openTo: Math.min(MAX, target + 28),
