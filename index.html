@@ -275,6 +275,11 @@
   .simbtns #simClose{background:linear-gradient(#4f9a72,#2f7350);border-color:#6cbb90;border-bottom-color:#1c4a33;box-shadow:0 3px 0 #163a28,0 4px 8px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.25);color:#fff;}
   .simbtns #simClose:active{box-shadow:0 0 0 #163a28, inset 0 2px 5px rgba(0,0,0,.45);}
 
+  .vlook{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;color:var(--text-dim);}
+  .vlook[hidden]{display:none;}
+  .vlook input[type=range]{flex:1;accent-color:var(--amber);height:28px;}
+  .vlook input[type=range]:disabled{opacity:.5;}
+
   /* ---------- zona de respuesta destacada ---------- */
   .actionbar{background:linear-gradient(rgba(242,169,0,.18),rgba(242,169,0,.06));
     border:2px solid var(--amber);border-radius:9px;padding:12px;box-shadow:0 0 0 4px rgba(242,169,0,.08);}
@@ -839,25 +844,52 @@
         ${vn}
         <rect x="${X0-10}" y="${LY0}" width="${n2(PR-X0+20)}" height="${LH}" fill="transparent"/>`;
 
-    const lupa = `<div class="lupa"><div class="lupa-tag">Lupa · regla y nonio (siempre centrada en el cero del nonio; arrastra aquí para el ajuste fino)</div>
+    const lupa = `<div class="lupa"><div class="lupa-tag">Lupa · regla y nonio (sigue a la corredera; arrastra aquí para el ajuste fino)</div>
       <div class="vscroll" id="vScroll" style="overflow:hidden"><svg class="instrument-svg lupa-svg" id="simLupa" width="100%" height="${LH}" viewBox="0 ${LY0} ${n2(W)} ${LH}" preserveAspectRatio="xMinYMin meet" style="width:100%;border:0;border-radius:0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ampliación de la regla y el nonio">
       <rect x="${X0-110}" y="${BY}" width="${n2(BEAM_R-X0+110)}" height="${BH}" rx="3" fill="url(#g-steel)" stroke="#5b6771"/>
       ${sc}
       <g id="vSlider" style="cursor:grab;touch-action:none">${lSlider}</g>
       <g id="vZero" style="display:none"><path d="${isMM ? `M${XS} ${BY+BH+3} l-9 -15 h18z` : `M${XS} ${BY-3} l-9 15 h18z`}" fill="${HELP}"/></g>
-      <line id="vHelp" x1="0" x2="0" y1="0" y2="0" stroke="${HELP}" stroke-width="3" stroke-dasharray="8,6" style="display:none"/>
-    </svg></div></div>`;
+      <line id="vHelp" x1="0" x2="0" y1="0" y2="0" stroke="${HELP}" stroke-width="4" stroke-dasharray="10,5" style="display:none"/>
+    </svg></div>
+      <div class="vlook" id="vLookRow" hidden><span>◀</span><label for="vLook">Recorrer el nonio</label><input type="range" id="vLook" min="0" max="1000" value="0" aria-label="Recorrer el nonio a lo largo de la lupa"><span>▶</span></div>
+    </div>`;
 
-    // La lupa no se desplaza a mano: su ventana (viewBox) se recalcula en cada movimiento para que el
-    // cero del nonio quede siempre en el mismo lugar y el nonio completo a la vista. En pantallas
-    // angostas se reduce (hasta 50 %) para que quepan el nonio y la marca anterior de la regla.
+    // La lupa no se desplaza con el dedo (la inercia la descentraba): su ventana (viewBox) se recalcula
+    // en cada movimiento. Si el nonio activo cabe, queda completo y centrado desde su cero. Si no cabe
+    // (nonio de 0.02 mm, 49 mm de largo), la lupa conserva un tamaño legible y aparece el control
+    // «Recorrer el nonio»; con la ayuda activada, se coloca sola sobre la línea que coincide.
+    const VWA = isMM ? VWM : VWI;                           // largo del nonio que se está leyendo
+    const KMIN = VWA > 600 ? .8 : .5;                       // tamaño mínimo de la lupa
+    let look = 0;                                           // posición del control «Recorrer el nonio» (0 a 1)
     function follow(){
       const c = el("vScroll"), sv = el("simLupa"); if(!c || !sv) return;
       const cw = c.clientWidth || 600;
-      const k = Math.min(1, Math.max(.5, cw/(VW + 300)));
-      const margin = Math.max(30/k, (cw/k - VW)/2);       // espacio a la izquierda del cero (unidades del dibujo)
+      const k = Math.min(1, Math.max(KMIN, cw/(VWA + 300)));
+      const viewW = cw/k, zeroX = XS + sim.p*Z;
+      const fits = VWA + 70 <= viewW;
+      let x0;
+      if(fits){
+        x0 = zeroX - Math.max(30/k, (viewW - VWA)/2);
+      } else {
+        const maxShift = VWA + 70 - viewW;                  // cuánto se puede recorrer (unidades del dibujo)
+        let shift = look*maxShift;
+        const h = el("vHelp");
+        if(help && h && h.style.display !== "none"){
+          shift = Math.min(maxShift, Math.max(0, (+h.getAttribute("x1") - zeroX) - viewW/2 + 40));
+          look = maxShift ? shift/maxShift : 0;
+        }
+        x0 = zeroX - 40 + shift;
+      }
+      const row = el("vLookRow"), rg = el("vLook");
+      if(row){ row.hidden = fits; }
+      if(rg){
+        if(!rg.dataset.bound){ rg.addEventListener("input", () => { look = rg.value/1000; follow(); }); rg.dataset.bound = "1"; }
+        rg.value = Math.round(look*1000);
+        rg.disabled = !!help;
+      }
       sv.setAttribute("height", n2(LH*k));
-      sv.setAttribute("viewBox", `${n2(XS + sim.p*Z - margin)} ${LY0} ${n2(cw/k)} ${LH}`);
+      sv.setAttribute("viewBox", `${n2(x0)} ${LY0} ${n2(viewW)} ${LH}`);
     }
     let lastMM = Math.floor(sim.p);
     function update(){
